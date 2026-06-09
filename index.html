@@ -3,483 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WECTI – 6ª Edição</title>
+  <title>WECTI – Tech Revolution: IA Generativa, Cloud & Desenvolvimento Inteligente</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <style>
-    /* ──────────────────────────────────────────
-       RESET & BASE
-    ────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #080d0c;
-      color: #e8e8f0;
-      overflow-x: hidden;
-    }
-    img { display: block; max-width: 100%; }
-    a { text-decoration: none; color: inherit; }
-
-    /* ──────────────────────────────────────────
-       CSS VARIABLES
-    ────────────────────────────────────────── */
-    :root {
-      --accent: #00a88a;
-      --accent2: #00d4b0;
-      --accent-light: #00e8c4;
-      --surface: #12121a;
-      --surface2: #1a1a28;
-      --border: rgba(255,255,255,0.07);
-      --text-muted: #888899;
-      --radius: 12px;
-      --max-w: 1180px;
-    }
-
-    /* ──────────────────────────────────────────
-       NAVBAR
-    ────────────────────────────────────────── */
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      padding: 0 2rem;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(10,10,15,0.75);
-      backdrop-filter: blur(18px);
-      border-bottom: 1px solid var(--border);
-      transition: background 0.3s;
-    }
-    .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 1.3rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(90deg, var(--accent-light), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .nav-logo-icon {
-      flex-shrink: 0;
-      width: 36px;
-      height: 36px;
-    }
-    .nav-links {
-      display: flex;
-      gap: 2rem;
-      list-style: none;
-    }
-    .nav-links a {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: #fff; }
-    .nav-cta {
-      background: var(--accent);
-      color: #fff !important;
-      padding: 0.45rem 1.2rem;
-      border-radius: 999px;
-      font-weight: 600 !important;
-      font-size: 0.85rem !important;
-      transition: opacity 0.2s !important;
-    }
-    .nav-cta:hover { opacity: 0.85; }
-
-    /* hamburger */
-    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
-    .hamburger span { width: 24px; height: 2px; background: #fff; border-radius: 2px; transition: 0.3s; }
-
-    /* ──────────────────────────────────────────
-       HERO
-    ────────────────────────────────────────── */
-    #hero {
-      position: relative;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      overflow: hidden;
-    }
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 60% 40%, rgba(0,212,176,0.12) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 50% at 20% 70%, rgba(0,168,138,0.12) 0%, transparent 60%),
-        linear-gradient(135deg, #080d0c 0%, #0a0f0e 100%);
-    }
-    /* animated grid */
-    .hero-grid {
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-      background-size: 60px 60px;
-      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-    }
-    /* floating orbs */
-    .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      animation: float 8s ease-in-out infinite;
-    }
-    .orb-1 { width: 500px; height: 500px; background: rgba(0,212,176,0.1); top: -100px; right: -80px; animation-delay: 0s; }
-    .orb-2 { width: 400px; height: 400px; background: rgba(0,168,138,0.1); bottom: -100px; left: 10%; animation-delay: 3s; }
-    @keyframes float {
-      0%, 100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-30px) scale(1.05); }
-    }
-
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      max-width: var(--max-w);
-      margin: 0 auto;
-      padding: 5rem 2rem 4rem;
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: auto auto;
-      gap: 0 4rem;
-      align-items: center;
-    }
-    .hero-text { grid-column: 1; grid-row: 1; }
-    .hero-visual { grid-column: 2; grid-row: 1; display: flex; align-items: center; justify-content: center; }
-    .hero-stats { grid-column: 1 / -1; grid-row: 2; }
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(0,212,176,0.1);
-      border: 1px solid rgba(0,212,176,0.3);
-      color: var(--accent-light);
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 0.35rem 1rem;
-      border-radius: 999px;
-      margin-bottom: 1.5rem;
-    }
-    .hero-eyebrow::before { content: ''; width: 6px; height: 6px; background: var(--accent-light); border-radius: 50%; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-    .hero-title {
-      font-size: clamp(3rem, 8vw, 6.5rem);
-      font-weight: 900;
-      line-height: 1.0;
-      letter-spacing: -0.03em;
-      margin-bottom: 1.5rem;
-    }
-    .hero-title em {
-      font-style: normal;
-      background: linear-gradient(90deg, var(--accent-light) 0%, var(--accent2) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .hero-subtitle {
-      font-size: clamp(1rem, 2vw, 1.2rem);
-      color: var(--text-muted);
-      max-width: 520px;
-      line-height: 1.7;
-      margin-bottom: 2.5rem;
-    }
-    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-      padding: 0.85rem 2rem;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      border: none;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.2s;
-      display: inline-block;
-    }
-    .btn-primary:hover { opacity: 0.88; transform: translateY(-2px); }
-    .btn-outline {
-      background: transparent;
-      color: #fff;
-      padding: 0.85rem 2rem;
-      border-radius: 999px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      border: 1px solid var(--border);
-      cursor: pointer;
-      transition: border-color 0.2s, transform 0.2s;
-      display: inline-block;
-    }
-    .btn-outline:hover { border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
-
-    /* stats strip */
-    .hero-stats {
-      display: flex;
-      gap: 3rem;
-      margin-top: 5rem;
-      padding-top: 3rem;
-      border-top: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-    .stat-item {}
-    .stat-value {
-      font-size: 2.2rem;
-      font-weight: 800;
-      background: linear-gradient(90deg, #fff, #aaa);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
-
-    /* ──────────────────────────────────────────
-       SECTION COMMONS
-    ────────────────────────────────────────── */
-    section { padding: 6rem 2rem; }
-    .container { max-width: var(--max-w); margin: 0 auto; }
-    .section-label {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--accent-light);
-      margin-bottom: 0.75rem;
-    }
-    .section-title {
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      line-height: 1.15;
-      margin-bottom: 1rem;
-    }
-    .section-desc {
-      color: var(--text-muted);
-      font-size: 1rem;
-      line-height: 1.75;
-      max-width: 600px;
-    }
-
-    /* ──────────────────────────────────────────
-       ABOUT
-    ────────────────────────────────────────── */
-    #sobre { background: var(--surface); }
-    .about-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 5rem;
-      align-items: center;
-    }
-    .about-visual {
-      position: relative;
-    }
-    .about-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 2.5rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .about-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-    }
-    .about-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, rgba(0,212,176,0.15), rgba(0,168,138,0.15));
-      border: 1px solid rgba(0,212,176,0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-      margin-bottom: 1.25rem;
-    }
-    .about-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .about-card p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.7; }
-    .about-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-
-    .edition-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 160px;
-      height: 160px;
-      border-radius: 50%;
-      border: 2px solid rgba(0,212,176,0.35);
-      background: radial-gradient(circle, rgba(0,212,176,0.12), transparent 70%);
-      margin: 0 auto 2rem;
-      position: relative;
-    }
-    .edition-badge::after {
-      content: '';
-      position: absolute;
-      inset: 8px;
-      border-radius: 50%;
-      border: 1px solid rgba(0,168,138,0.3);
-    }
-    .edition-number { font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, var(--accent-light), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .edition-label { font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; text-align: center; margin-bottom: 2rem; }
-
-    /* ──────────────────────────────────────────
-       GALLERY
-    ────────────────────────────────────────── */
-    #galeria { background: #080d0c; }
-    .gallery-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 3rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: auto;
-      gap: 1rem;
-    }
-    .gallery-item {
-      position: relative;
-      border-radius: var(--radius);
-      overflow: hidden;
-      cursor: pointer;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      aspect-ratio: 4/3;
-    }
-    .gallery-item.wide { grid-column: span 2; }
-    .gallery-item.tall { grid-row: span 2; aspect-ratio: auto; }
-
-    .gallery-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      transition: background 0.3s;
-      min-height: 200px;
-      background: linear-gradient(135deg, var(--surface2), rgba(0,212,176,0.04));
-    }
-    .gallery-placeholder-icon { font-size: 2rem; opacity: 0.4; }
-    .gallery-item:hover .gallery-placeholder { background: rgba(0,212,176,0.06); }
-
-    /* real image inside gallery item */
-    .gallery-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.4s ease;
-    }
-    .gallery-item:hover img { transform: scale(1.05); }
-    .gallery-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-      opacity: 0;
-      transition: opacity 0.3s;
-      display: flex;
-      align-items: flex-end;
-      padding: 1rem;
-    }
-    .gallery-item:hover .gallery-overlay { opacity: 1; }
-    .gallery-overlay span { font-size: 0.8rem; color: #fff; font-weight: 500; }
-
-    /* ──────────────────────────────────────────
-       LIGHTBOX
-    ────────────────────────────────────────── */
-    .lightbox {
-      position: fixed;
-      inset: 0;
-      z-index: 999;
-      background: rgba(0,0,0,0.92);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
-      padding: 2rem;
-    }
-    .lightbox.active { opacity: 1; pointer-events: all; }
-    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; object-fit: contain; }
-    .lightbox-close {
-      position: absolute;
-      top: 1.5rem; right: 1.5rem;
-      background: rgba(255,255,255,0.1);
-      border: none;
-      color: #fff;
-      width: 40px; height: 40px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 1.2rem;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.2s;
-    }
-    .lightbox-close:hover { background: rgba(255,255,255,0.2); }
-
-    /* ──────────────────────────────────────────
-       FOOTER
-    ────────────────────────────────────────── */
-    footer {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 3rem 2rem;
-      text-align: center;
-    }
-    .footer-logo { font-size: 1.4rem; font-weight: 800; background: linear-gradient(90deg, var(--accent-light), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.75rem; }
-    .footer-text { color: var(--text-muted); font-size: 0.825rem; line-height: 1.7; }
-    .footer-divider { width: 40px; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); margin: 1.5rem auto; border-radius: 2px; }
-
-    /* ──────────────────────────────────────────
-       RESPONSIVE
-    ────────────────────────────────────────── */
-    @media (max-width: 900px) {
-      .about-grid { grid-template-columns: 1fr; gap: 3rem; }
-      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
-      .gallery-item.wide { grid-column: span 2; }
-      .gallery-item.tall { grid-row: span 1; aspect-ratio: 4/3; }
-      .nav-links { display: none; }
-      .nav-links.open {
-        display: flex;
-        flex-direction: column;
-        position: fixed;
-        top: 64px; left: 0; right: 0;
-        background: rgba(10,10,15,0.97);
-        padding: 2rem;
-        gap: 1.5rem;
-        border-bottom: 1px solid var(--border);
-      }
-      .hamburger { display: flex; }
-      .hero-stats { gap: 2rem; }
-      .hero-content { grid-template-columns: 1fr; }
-      .hero-visual { display: none; }
-      .hero-stats { grid-column: 1; }
-    }
-    @media (max-width: 600px) {
-      .gallery-grid { grid-template-columns: 1fr; }
-      .gallery-item.wide { grid-column: span 1; }
-      .about-cards-grid { grid-template-columns: 1fr; }
-      .hero-title { font-size: 2.8rem; }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -515,7 +44,7 @@
       WECTI
     </div>
     <ul class="nav-links" id="navLinks">
-      <li><a href="#hero">Home</a></li>
+      <li><a href="#home">Home</a></li>
       <li><a href="#sobre">Sobre</a></li>
       <li><a href="#galeria">Galeria</a></li>
       <li><a href="#contato" class="nav-cta">Contato</a></li>
@@ -526,7 +55,7 @@
   </nav>
 
   <!-- ── HERO ── -->
-  <section id="hero">
+  <section id="home">
     <div class="hero-bg"></div>
     <div class="hero-grid"></div>
     <div class="orb orb-1"></div>
@@ -537,13 +66,13 @@
         <div class="hero-eyebrow">Em breve · 6ª Edição</div>
 
         <h1 class="hero-title">
-          Workshop de<br/>
-          Tecnologia<br/>
-          <em>& Inovação</em>
+          Tech<br/>
+          Revolution<br/>
+          <em>WECTI 2026</em>
         </h1>
 
         <p class="hero-subtitle">
-          A WECTI reúne projetos, pesquisas e ideias dos estudantes. Venha fazer parte dessa experiência na 6ª edição.
+          IA Generativa, Cloud e Desenvolvimento Inteligente — a 6ª edição da WECTI explora as tecnologias que estão transformando o mundo.
         </p>
 
         <div class="hero-actions">
@@ -657,63 +186,16 @@
         </p>
       </div>
 
-      <div class="gallery-grid" id="galleryGrid">
-
-        <div class="gallery-item wide" data-label="WECTI 2024">
-          <div class="gallery-placeholder">
-            <div class="gallery-placeholder-icon">📷</div>
-            <span>Foto destaque — cole aqui sua imagem principal</span>
-          </div>
-          <div class="gallery-overlay"><span>WECTI 2024</span></div>
+      <div class="carousel-wrapper">
+        <button class="carousel-btn carousel-btn-prev" id="carouselPrev" aria-label="Anterior">&#8592;</button>
+        <div class="carousel-track-outer">
+          <div class="carousel-track" id="carouselTrack"></div>
         </div>
-
-        <div class="gallery-item" data-label="Projetos">
-          <div class="gallery-placeholder">
-            <div class="gallery-placeholder-icon">📷</div>
-            <span>Foto de projeto</span>
-          </div>
-          <div class="gallery-overlay"><span>Projetos</span></div>
-        </div>
-
-        <div class="gallery-item" data-label="Abertura">
-          <div class="gallery-placeholder">
-            <div class="gallery-placeholder-icon">📷</div>
-            <span>Cerimônia de abertura</span>
-          </div>
-          <div class="gallery-overlay"><span>Abertura</span></div>
-        </div>
-
-        <div class="gallery-item" data-label="Premiação">
-          <div class="gallery-placeholder">
-            <div class="gallery-placeholder-icon">📷</div>
-            <span>Premiação</span>
-          </div>
-          <div class="gallery-overlay"><span>Premiação</span></div>
-        </div>
-
-        <div class="gallery-item" data-label="Visitantes">
-          <div class="gallery-placeholder">
-            <div class="gallery-placeholder-icon">📷</div>
-            <span>Visitantes e expositores</span>
-          </div>
-          <div class="gallery-overlay"><span>Visitantes</span></div>
-        </div>
-
-        <div class="gallery-item" data-label="Stand">
-          <div class="gallery-placeholder">
-            <div class="gallery-placeholder-icon">📷</div>
-            <span>Stand de exposição</span>
-          </div>
-          <div class="gallery-overlay"><span>Stand</span></div>
-        </div>
-
+        <button class="carousel-btn carousel-btn-next" id="carouselNext" aria-label="Próximo">&#8594;</button>
       </div>
 
-      <div style="text-align:center; margin-top:2.5rem;">
-        <button class="btn-outline" onclick="addPhotoSlot()" style="font-size:0.875rem; padding:0.7rem 1.6rem;">
-          + Adicionar foto
-        </button>
-      </div>
+      <div class="carousel-dots" id="carouselDots"></div>
+      <p class="carousel-counter" id="carouselCounter"></p>
     </div>
   </section>
 
@@ -727,32 +209,27 @@
           <p class="section-label">Sobre o evento</p>
           <h2 class="section-title">O que é a WECTI?</h2>
           <p class="section-desc">
-            A WECTI é um espaço para estudantes apresentarem soluções criativas, inovadoras e tecnológicas para desafios reais da sociedade.
+            A WECTI é o espaço onde estudantes apresentam projetos reais voltados às tecnologias que estão moldando o futuro: Inteligência Artificial Generativa, Cloud Computing e Desenvolvimento Inteligente.
           </p>
           <p class="section-desc" style="margin-top:1rem;">
-            Durante o evento, alunos expõem projetos desenvolvidos ao longo do ano letivo, concorrem a prêmios e têm a oportunidade de se conectar com o mercado.
+            Na 6ª edição, o tema <strong style="color:var(--accent)">Tech Revolution</strong> convida a comunidade acadêmica a explorar, debater e demonstrar como essas tecnologias estão transformando indústrias, negócios e a vida cotidiana.
           </p>
 
           <div class="about-cards-grid" style="margin-top:2.5rem;">
             <div class="about-card">
-              <div class="about-icon">🏆</div>
-              <h3>Premiação</h3>
-              <p>Os melhores projetos são reconhecidos em diversas categorias técnicas.</p>
+              <div class="about-icon">🤖</div>
+              <h3>IA Generativa</h3>
+              <p>LLMs, modelos de imagem e agentes autônomos aplicados a problemas reais.</p>
             </div>
             <div class="about-card">
-              <div class="about-icon">🤝</div>
-              <h3>Networking</h3>
-              <p>Conecte-se com empresas, professores e outros estudantes da área.</p>
+              <div class="about-icon">☁️</div>
+              <h3>Cloud</h3>
+              <p>Arquiteturas escaláveis, serverless e infraestrutura moderna na nuvem.</p>
             </div>
             <div class="about-card">
-              <div class="about-icon">💡</div>
-              <h3>Inovação</h3>
-              <p>Projetos que impactam a comunidade e resolvem problemas reais.</p>
-            </div>
-            <div class="about-card">
-              <div class="about-icon">🎓</div>
-              <h3>Aprendizado</h3>
-              <p>Uma oportunidade única de crescimento acadêmico e profissional.</p>
+              <div class="about-icon">⚙️</div>
+              <h3>Dev Inteligente</h3>
+              <p>Ferramentas, automações e práticas que aceleram o desenvolvimento de software.</p>
             </div>
           </div>
         </div>
@@ -769,7 +246,7 @@
           <div class="about-card">
             <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1rem;">Novidades em breve</div>
             <p style="font-size:0.875rem; color:var(--text-muted); line-height:1.7;">
-              A 6ª edição da WECTI está sendo preparada com muito cuidado. Fique de olho nessa página para as próximas atualizações sobre datas, local e inscrições.
+              A 6ª edição da WECTI está sendo preparada com muito cuidado. Em breve: datas, programação, palestras e como inscrever seu projeto em <strong style="color:var(--accent)">Tech Revolution</strong>.
             </p>
             <div style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border); display:flex; gap:1rem; justify-content:center;">
               <a href="#" class="btn-primary" style="font-size:0.825rem; padding:0.6rem 1.4rem;">Em breve</a>
@@ -786,7 +263,7 @@
     <div class="footer-logo">WECTI</div>
     <div class="footer-divider"></div>
     <p class="footer-text">
-      Workshop de Empreendedorismo, Ciência, Tecnologia e Inovação &mdash; 6ª Edição
+      Workshop de Empreendedorismo, Ciência, Tecnologia e Inovação &mdash; Tech Revolution · 6ª Edição
     </p>
     <p class="footer-text" style="margin-top:1.5rem; font-size:0.75rem; opacity:0.5;">
       © 2026 WECTI. Template desenvolvido para a 6ª edição.
@@ -794,8 +271,11 @@
   </footer>
 
   <!-- ── LIGHTBOX ── -->
-  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-backdrop" onclick="closeLightbox()"></div>
+    <button class="lightbox-nav lightbox-prev" onclick="lightboxNav(-1)">&#8592;</button>
     <img id="lightboxImg" src="" alt="" />
+    <button class="lightbox-nav lightbox-next" onclick="lightboxNav(1)">&#8594;</button>
     <button class="lightbox-close" onclick="closeLightbox()">✕</button>
   </div>
 
@@ -814,52 +294,115 @@
         : 'rgba(10,10,15,0.75)';
     });
 
-    // ── Gallery click → lightbox (only for real <img> elements) ──
-    document.getElementById('galleryGrid').addEventListener('click', e => {
-      const item = e.target.closest('.gallery-item');
-      if (!item) return;
-      const img = item.querySelector('img');
-      if (!img) return; // placeholder — no lightbox
-      document.getElementById('lightboxImg').src = img.src;
-      document.getElementById('lightboxImg').alt = img.alt;
-      document.getElementById('lightbox').classList.add('active');
+    // ── Gallery data ──
+    // Profissionais (wecti/webcti) primeiro, ordenadas por número de sequência; celular no final
+    const allPhotos = [
+      "fotos/20250526_190558.jpg","fotos/2411062003-wecti-030.jpg","fotos/2411062006-wecti-036.jpg","fotos/20241108_103651.jpg",
+      "fotos/2411061937-wecti-013.jpg","fotos/2411070950-wecti-043.jpg","fotos/2411060942-wecti-029.jpg","fotos/2411070950-wecti-046.jpg",
+      "fotos/2411061931-wecti-005.jpg","fotos/20250526_190736.jpg","fotos/2411072118-webcti-042.jpg","fotos/2411062005-wecti-034.jpg",
+      "fotos/2411070913-wecti-013.jpg","fotos/2411070840-wecti-001.jpg","fotos/2411070910-wecti-009.jpg","fotos/2411071939-webcti-007.jpg",
+      "fotos/20250526_190336.jpg","fotos/2411062209-wecti-047.jpg","fotos/20250526_190630.jpg","fotos/2411062007-wecti-038.jpg",
+      "fotos/2411070917-wecti-025.jpg","fotos/20241106_112732.jpg","fotos/2411071954-webcti-009.jpg","fotos/2411061929-wecti-001.jpg",
+      "fotos/2411071909-webcti-015.jpg","fotos/2411082056-wecti-018.jpg","fotos/2411070914-wecti-018.jpg","fotos/2411072051-webcti-019.jpg",
+      "fotos/2411070909-wecti-006.jpg","fotos/2411061933-wecti-008.jpg","fotos/2411061943-wecti-017.jpg","fotos/20250526_190753.jpg",
+      "fotos/2411082108-wecti-024.jpg","fotos/2411070913-wecti-012.jpg","fotos/2411072012-webcti-035.jpg","fotos/2411060909-wecti-013.jpg",
+      "fotos/2411071106-wecti-048.jpg","fotos/2411072157-webcti-044.jpg","fotos/20241108_103544.jpg","fotos/2411062016-wecti-045.jpg",
+      "fotos/2411070926-wecti-037.jpg","fotos/20250526_190349.jpg","fotos/2411070913-wecti-015.jpg","fotos/2411071917-webcti-008.jpg",
+      "fotos/20250526_190411.jpg","fotos/20250526_190524.jpg","fotos/2411060911-wecti-016.jpg","fotos/2411060920-wecti-027.jpg",
+      "fotos/2411060943-wecti-030.jpg","fotos/2411072032-webcti-022.jpg","fotos/20241108_102230.jpg","fotos/20250526_190455.jpg",
+      "fotos/2411071042-wecti-047.jpg"
+    ];
+
+    // ── Carousel ──
+    let carouselIndex = 0;
+    let autoTimer = null;
+    let lightboxIndex = 0;
+
+    const track   = document.getElementById('carouselTrack');
+    const dotsEl  = document.getElementById('carouselDots');
+    const counter = document.getElementById('carouselCounter');
+
+    function visibleCount() {
+      return window.innerWidth >= 900 ? 3 : window.innerWidth >= 600 ? 2 : 1;
+    }
+
+    function buildCarousel() {
+      track.innerHTML = '';
+      dotsEl.innerHTML = '';
+      allPhotos.forEach((src, i) => {
+        const slide = document.createElement('div');
+        slide.className = 'carousel-slide';
+        slide.innerHTML = `<img src="${src}" alt="WECTI foto ${i+1}" loading="lazy" />`;
+        slide.addEventListener('click', () => openLightbox(i));
+        track.appendChild(slide);
+      });
+      const pages = Math.ceil(allPhotos.length / visibleCount());
+      for (let i = 0; i < pages; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'carousel-dot';
+        dot.setAttribute('aria-label', `Página ${i+1}`);
+        dot.addEventListener('click', () => goTo(i * visibleCount()));
+        dotsEl.appendChild(dot);
+      }
+      goTo(0);
+    }
+
+    function goTo(idx) {
+      const vc   = visibleCount();
+      const max  = allPhotos.length - vc;
+      carouselIndex = Math.max(0, Math.min(idx, max));
+      const slideW = track.parentElement.offsetWidth / vc;
+      track.style.transform = `translateX(-${carouselIndex * slideW}px)`;
+      counter.textContent = `${carouselIndex + 1} – ${Math.min(carouselIndex + vc, allPhotos.length)} de ${allPhotos.length}`;
+      // dots
+      const page = Math.floor(carouselIndex / vc);
+      document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === page));
+    }
+
+    function carouselNext() { goTo(carouselIndex + visibleCount()); resetAuto(); }
+    function carouselPrev() { goTo(carouselIndex - visibleCount()); resetAuto(); }
+
+    function startAuto() { autoTimer = setInterval(() => { const vc = visibleCount(); carouselIndex + vc >= allPhotos.length ? goTo(0) : goTo(carouselIndex + vc); }, 4000); }
+    function resetAuto()  { clearInterval(autoTimer); startAuto(); }
+
+    document.getElementById('carouselNext').addEventListener('click', carouselNext);
+    document.getElementById('carouselPrev').addEventListener('click', carouselPrev);
+    window.addEventListener('resize', () => { buildCarousel(); });
+
+    // Swipe support
+    let touchStartX = 0;
+    track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    track.addEventListener('touchend',   e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) dx < 0 ? carouselNext() : carouselPrev();
     });
+
+    // ── Lightbox ──
+    function openLightbox(idx) {
+      lightboxIndex = idx;
+      document.getElementById('lightboxImg').src = allPhotos[idx];
+      document.getElementById('lightbox').classList.add('active');
+    }
 
     function closeLightbox() {
       document.getElementById('lightbox').classList.remove('active');
     }
+
+    function lightboxNav(dir) {
+      lightboxIndex = (lightboxIndex + dir + allPhotos.length) % allPhotos.length;
+      document.getElementById('lightboxImg').src = allPhotos[lightboxIndex];
+    }
+
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeLightbox();
+      if (!document.getElementById('lightbox').classList.contains('active')) return;
+      if (e.key === 'Escape')      closeLightbox();
+      if (e.key === 'ArrowRight')  lightboxNav(1);
+      if (e.key === 'ArrowLeft')   lightboxNav(-1);
     });
 
-    // ── Add photo slot ──
-    let photoCount = 0;
-    function addPhotoSlot() {
-      photoCount++;
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const item = document.createElement('div');
-          item.className = 'gallery-item';
-          item.dataset.label = `Foto ${photoCount}`;
-          item.innerHTML = `
-            <img src="${ev.target.result}" alt="Foto ${photoCount}" />
-            <div class="gallery-overlay"><span>Foto ${photoCount}</span></div>
-          `;
-          document.getElementById('galleryGrid').insertBefore(
-            item,
-            document.getElementById('galleryGrid').lastElementChild
-          );
-        };
-        reader.readAsDataURL(file);
-      };
-      input.click();
-    }
+    // ── Init ──
+    buildCarousel();
+    startAuto();
 
     // ── Intersection observer for fade-in ──
     const observer = new IntersectionObserver((entries) => {
@@ -871,7 +414,7 @@
       });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.about-card, .gallery-item, .stat-item').forEach(el => {
+    document.querySelectorAll('.about-card, .stat-item').forEach(el => {
       el.style.opacity = '0';
       el.style.transform = 'translateY(20px)';
       el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
