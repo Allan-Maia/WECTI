@@ -1,0 +1,62 @@
+# Namespace proprio (app.datasource.*), nao spring.datasource.* - a
+# hospedagem (Integrator Host) injeta SPRING_DATASOURCE_USERNAME/PASSWORD
+# como variavel de ambiente do processo, e variavel de ambiente sempre
+# ganha de qualquer application.yml. O DataSourceConfig.java le essas
+# propriedades e monta o DataSource manualmente, ignorando a
+# spring.datasource.* que a hospedagem sobrescreve.
+app:
+  datasource:
+    url: jdbc:mysql://localhost:3306/jadir9152_wecti?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
+    # Sem valor padrao de proposito: usuario/senha de producao nunca ficam
+    # no codigo-fonte. Configure DB_USER/DB_PASSWORD como variavel de
+    # ambiente real no painel da hospedagem (ou no application.yml externo
+    # em appservers/standalone) - se nao estiverem definidas, a aplicacao
+    # falha ao subir em vez de usar um valor exposto aqui.
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cors:
+    # Origens que podem chamar a API do navegador (politica de CORS, ver
+    # SecurityConfig.corsConfigurationSource). Em producao, defina
+    # CORS_ALLOWED_ORIGINS com o dominio real do frontend (varias origens
+    # separadas por virgula) assim que ele for publicado - sem isso, o
+    # navegador bloqueia toda chamada do site pra essa API.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+spring:
+  application:
+    name: wecti-api
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        # As entidades usam java.util.UUID como PK; sem isso, o Hibernate
+        # mapeia UUID para BINARY(16) por padrao no dialeto MySQL, mas a
+        # migration usa VARCHAR(36) - a validacao do schema quebraria no
+        # startup sem essa propriedade.
+        type:
+          preferred_uuid_jdbc_type: VARCHAR
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+
+springdoc:
+  swagger-ui:
+    path: /docs
+  api-docs:
+    path: /api-docs
+
+jwt:
+  # Idem: sem default. Configure JWT_SECRET com um valor aleatorio forte
+  # no ambiente de producao - esse segredo assina os tokens de login, um
+  # valor exposto no codigo permitiria forjar tokens validos.
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}

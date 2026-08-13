@@ -1,0 +1,18 @@
+# Perfil de desenvolvimento local - sobrescreve so o que muda em relacao
+# ao application.yml (que agora nao tem nenhum default sensivel, de
+# proposito, para producao). Ative com:
+#   mvn spring-boot:run -Dspring-boot.run.profiles=dev
+# ou
+#   SPRING_PROFILES_ACTIVE=dev mvn spring-boot:run
+#
+# Os valores abaixo sao os mesmos do docker-compose.yml local (usuario e
+# senha de dev, sem risco nenhum se aparecerem aqui).
+app:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:wecti}?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
+    username: ${DB_USER:wecti}
+    password: ${DB_PASSWORD:wecti}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+jwt:
+  secret: ${JWT_SECRET:wecti-dev-secret-key-troque-em-producao-minimo-256-bits-1234567890}

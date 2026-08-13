@@ -1,0 +1,98 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
+import Button from '../components/Button';
+import FormField from '../components/FormField';
+import { useAuth } from '../context/AuthContext';
+import { extrairMensagemErro } from '../services/api';
+
+const schema = z.object({
+  email: z.string().min(1, 'Informe o email').email('Email invalido'),
+  senha: z.string().min(1, 'Informe a senha'),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+export default function LoginPage() {
+  const { entrar } = useAuth();
+  const navigate = useNavigate();
+  const [erroGeral, setErroGeral] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const onSubmit = async (dados: FormValues) => {
+    setErroGeral(null);
+    setEnviando(true);
+    try {
+      const usuario = await entrar(dados);
+      navigate(usuario.perfil === 'ALUNO' ? '/eventos' : '/admin/eventos', { replace: true });
+    } catch (erro) {
+      setErroGeral(extrairMensagemErro(erro, 'Nao foi possivel entrar. Verifique seus dados.'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-4">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 80% 60% at 60% 40%, rgba(0,212,176,0.10) 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 20% 70%, rgba(0,168,138,0.10) 0%, transparent 60%)',
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="mb-8 flex justify-center">
+          <Logo />
+        </div>
+
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-4 rounded-card border border-border bg-surface p-8"
+        >
+          <div className="mb-2 text-center">
+            <h1 className="text-lg font-bold text-text">Entrar</h1>
+            <p className="mt-1 text-sm text-text-muted">Acesse com seu email e senha</p>
+          </div>
+
+          <FormField
+            label="Email"
+            type="email"
+            autoComplete="email"
+            placeholder="voce@unicid.edu.br"
+            erro={errors.email?.message}
+            registro={register('email')}
+          />
+          <FormField
+            label="Senha"
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            erro={errors.senha?.message}
+            registro={register('senha')}
+          />
+
+          {erroGeral && (
+            <p className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
+              {erroGeral}
+            </p>
+          )}
+
+          <Button type="submit" carregando={enviando} className="mt-2 w-full">
+            Entrar
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}

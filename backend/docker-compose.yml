@@ -1,0 +1,21 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: wecti-db
+    environment:
+      MYSQL_DATABASE: wecti
+      MYSQL_USER: wecti
+      MYSQL_PASSWORD: wecti
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - wecti-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "wecti", "-pwecti"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  wecti-db-data:
