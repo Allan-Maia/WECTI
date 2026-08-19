@@ -10,5 +10,8 @@ public record NovoUsuarioRequest(
         @NotBlank String nome,
         @NotBlank @Email String email,
         @NotNull Perfil perfil,
-        @Pattern(regexp = "^\\d{8}$", message = "RGM deve ter exatamente 8 digitos") String rgm) {
+        @Pattern(regexp = "^\\d{8}$", message = "RGM deve ter exatamente 8 digitos") String rgm,
+        @Pattern(regexp = "^\\d{11}$", message = "CPF deve ter exatamente 11 digitos") String cpf,
+        // So informativo (curso do aluno) - sem formato/obrigatoriedade.
+        String curso) {
 }

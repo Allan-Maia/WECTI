@@ -22,8 +22,7 @@ export default function PontuacaoPage() {
       {!carregando && !erro && pontuacao && (
         <div className="flex flex-col gap-6">
           <div className="rounded-card border border-border bg-surface p-8 text-center">
-            <p className="text-sm uppercase tracking-wider text-text-muted">{pontuacao.periodo_nome}</p>
-            <p className="mt-2 text-5xl font-extrabold text-accent">{pontuacao.pontos_total}</p>
+            <p className="text-5xl font-extrabold text-accent">{pontuacao.pontos_total}</p>
             <p className="mt-1 text-sm text-text-muted">pontos acumulados</p>
           </div>
 

@@ -4,15 +4,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Button from '../../components/Button';
 import FormField from '../../components/FormField';
-import { listarPeriodos } from '../../services/periodos';
 import { listarPalestrantes } from '../../services/palestrantes';
-import type { Evento, Periodo, Palestrante } from '../../types';
+import type { Evento, Palestrante } from '../../types';
 import { paraInputDateTime } from '../../utils/data';
 
+// Sem periodo_id aqui: o backend descobre sozinho o Periodo (semestre) a
+// partir da data do evento - ver EventoService.buscarPeriodoPelaData.
 const schema = z.object({
   titulo: z.string().min(1, 'Informe o título'),
   descricao: z.string().optional(),
-  periodo_id: z.string().min(1, 'Selecione um período'),
   local: z.string().optional(),
   data_hora_inicio: z.string().min(1, 'Informe a data de início'),
   data_hora_fim: z.string().min(1, 'Informe a data de término'),
@@ -29,14 +29,12 @@ interface Props {
 }
 
 export default function EventoFormModal({ evento, onSalvar, onFechar }: Props) {
-  const [periodos, setPeriodos] = useState<Periodo[]>([]);
   const [palestrantes, setPalestrantes] = useState<Palestrante[]>([]);
   const [selecionados, setSelecionados] = useState<string[]>(evento?.palestrantes.map((p) => p.id) ?? []);
   const [salvando, setSalvando] = useState(false);
   const [erroGeral, setErroGeral] = useState<string | null>(null);
 
   useEffect(() => {
-    listarPeriodos().then(setPeriodos).catch(() => setPeriodos([]));
     listarPalestrantes().then(setPalestrantes).catch(() => setPalestrantes([]));
   }, []);
 
@@ -50,7 +48,6 @@ export default function EventoFormModal({ evento, onSalvar, onFechar }: Props) {
       ? {
           titulo: evento.titulo,
           descricao: evento.descricao ?? '',
-          periodo_id: evento.periodo_id,
           local: evento.local ?? '',
           data_hora_inicio: paraInputDateTime(evento.data_hora_inicio),
           data_hora_fim: paraInputDateTime(evento.data_hora_fim),
@@ -86,22 +83,6 @@ export default function EventoFormModal({ evento, onSalvar, onFechar }: Props) {
 
         <FormField label="Título" erro={errors.titulo?.message} registro={register('titulo')} />
         <FormField label="Descrição" erro={errors.descricao?.message} registro={register('descricao')} />
-
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-text">Período</span>
-          <select
-            className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-text outline-none focus:border-accent"
-            {...register('periodo_id')}
-          >
-            <option value="">Selecione...</option>
-            {periodos.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-          {errors.periodo_id && <span className="text-xs text-red-400">{errors.periodo_id.message}</span>}
-        </label>
 
         <FormField label="Local" erro={errors.local?.message} registro={register('local')} />
 

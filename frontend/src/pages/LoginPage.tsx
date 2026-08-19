@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, type Location } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Button from '../components/Button';
 import FormField from '../components/FormField';
@@ -19,6 +19,7 @@ type FormValues = z.infer<typeof schema>;
 export default function LoginPage() {
   const { entrar } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -33,7 +34,13 @@ export default function LoginPage() {
     setEnviando(true);
     try {
       const usuario = await entrar(dados);
-      navigate(usuario.perfil === 'ALUNO' ? '/eventos' : '/admin/eventos', { replace: true });
+      // Se o usuario veio de uma rota protegida (ex.: link do QR code de
+      // check-in escaneado sem estar logado), volta pra ela em vez de
+      // sempre mandar pra home do perfil.
+      const destino = (location.state as { from?: Pick<Location, 'pathname' | 'search'> } | null)?.from;
+      navigate(destino ? `${destino.pathname}${destino.search ?? ''}` : usuario.perfil === 'ALUNO' ? '/eventos' : '/admin/eventos', {
+        replace: true,
+      });
     } catch (erro) {
       setErroGeral(extrairMensagemErro(erro, 'Nao foi possivel entrar. Verifique seus dados.'));
     } finally {
@@ -82,6 +89,10 @@ export default function LoginPage() {
             registro={register('senha')}
           />
 
+          <Link to="/recuperar-senha" className="-mt-1 self-end text-xs text-text-muted hover:text-accent hover:underline">
+            Esqueceu a senha?
+          </Link>
+
           {erroGeral && (
             <p className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
               {erroGeral}
@@ -91,6 +102,13 @@ export default function LoginPage() {
           <Button type="submit" carregando={enviando} className="mt-2 w-full">
             Entrar
           </Button>
+
+          <p className="text-center text-sm text-text-muted">
+            Primeiro acesso?{' '}
+            <Link to="/cadastro" className="font-medium text-accent hover:underline">
+              Crie sua conta
+            </Link>
+          </p>
         </form>
       </div>
     </div>

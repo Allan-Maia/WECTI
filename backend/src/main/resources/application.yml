@@ -22,6 +22,12 @@ app:
     # separadas por virgula) assim que ele for publicado - sem isso, o
     # navegador bloqueia toda chamada do site pra essa API.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  # URL do frontend usada pra montar o link embutido no QR code de
+  # check-in/check-out (CheckinSessaoController) - o aluno escaneia com a
+  # camera do celular, que abre essa URL direto, sem precisar de app.
+  # Configure FRONTEND_URL com o dominio real assim que o frontend for
+  # publicado.
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 spring:
   application:

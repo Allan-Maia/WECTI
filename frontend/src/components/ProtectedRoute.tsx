@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import type { Perfil } from '../types';
 
@@ -12,9 +12,13 @@ interface Props {
 
 export default function ProtectedRoute({ children, perfis }: Props) {
   const { autenticado, perfil } = useAuth();
+  const location = useLocation();
 
   if (!autenticado) {
-    return <Navigate to="/login" replace />;
+    // Guarda a rota original (ex.: link do QR code de check-in) pra
+    // LoginPage devolver o usuario pra ca depois do login, em vez de
+    // sempre mandar pra home do perfil.
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (perfis && perfil && !perfis.includes(perfil)) {

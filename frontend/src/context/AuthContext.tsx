@@ -1,14 +1,28 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { login as loginRequest } from '../services/auth';
+import {
+  login as loginRequest,
+  redefinirSenha as redefinirSenhaRequest,
+  registrar as registrarRequest,
+} from '../services/auth';
 import { TOKEN_KEY, USUARIO_KEY } from '../services/api';
-import type { JwtPayload, LoginRequest, Perfil, Usuario } from '../types';
+import type {
+  CadastroAlunoRequest,
+  JwtPayload,
+  LoginRequest,
+  LoginResponse,
+  Perfil,
+  RedefinirSenhaRequest,
+  Usuario,
+} from '../types';
 
 interface AuthContextValue {
   usuario: Usuario | null;
   perfil: Perfil | null;
   autenticado: boolean;
   entrar: (dados: LoginRequest) => Promise<Usuario>;
+  registrar: (dados: CadastroAlunoRequest) => Promise<Usuario>;
+  redefinirSenha: (dados: RedefinirSenhaRequest) => Promise<Usuario>;
   sair: () => void;
 }
 
@@ -41,14 +55,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(() => lerUsuarioSalvo());
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
 
-  const entrar = async (dados: LoginRequest) => {
-    const resposta = await loginRequest(dados);
+  const persistirSessao = (resposta: LoginResponse) => {
     localStorage.setItem(TOKEN_KEY, resposta.token);
     localStorage.setItem(USUARIO_KEY, JSON.stringify(resposta.usuario));
     setToken(resposta.token);
     setUsuario(resposta.usuario);
     return resposta.usuario;
   };
+
+  const entrar = async (dados: LoginRequest) => persistirSessao(await loginRequest(dados));
+
+  // Cadastro publico ja devolve token igual ao login - entra direto no
+  // sistema sem precisar de um segundo passo de login em seguida.
+  const registrar = async (dados: CadastroAlunoRequest) => persistirSessao(await registrarRequest(dados));
+
+  // "Esqueci minha senha" tambem ja devolve token - entra direto com a
+  // senha nova.
+  const redefinirSenha = async (dados: RedefinirSenhaRequest) => persistirSessao(await redefinirSenhaRequest(dados));
 
   const sair = () => {
     localStorage.removeItem(TOKEN_KEY);
@@ -64,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     perfil,
     autenticado: Boolean(token),
     entrar,
+    registrar,
+    redefinirSenha,
     sair,
   };
 

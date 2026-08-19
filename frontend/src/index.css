@@ -33,6 +33,12 @@
 
   html {
     scroll-behavior: smooth;
+    /* Sem isso, o navegador desenha os controles nativos (date/time
+       picker, scrollbar, select) no tema claro do SO por padrao, o que
+       destoa muito do resto do site - com isso o popup de calendario/hora
+       do <input type="datetime-local"> (usado no formulario de Evento)
+       já nasce escuro, combinando com o resto. */
+    color-scheme: dark;
   }
 
   body {
@@ -42,6 +48,17 @@
 
   ::selection {
     background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+
+  /* Realca o icone de calendario/relogio do <input type="datetime-local">
+     com a cor de destaque do sistema, em vez do cinza padrao do SO. */
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(70%) sepia(70%) saturate(900%) hue-rotate(115deg) brightness(1.05);
+  }
+
+  input[type='datetime-local'] {
+    accent-color: var(--color-accent);
   }
 }
 

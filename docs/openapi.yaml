@@ -9,8 +9,10 @@
 #   - Pontos do evento sao definidos no proprio cadastro do evento.
 #   - Pontuacao e acumulada dentro do periodo (semestre) e reinicia a cada
 #     novo periodo cadastrado.
-#   - Perfis: admin, professor, aluno. O app Android aceita login de admin
-#     e professor (sem perfil "operador" separado).
+#   - Perfis: admin, professor, aluno (sem perfil "operador" separado).
+#   - Nao ha app Android dedicado: admin/professor gera o QR code de
+#     check-in/check-out pelo proprio site e o aluno confirma a propria
+#     presenca escaneando com a camera do celular (Android ou iOS).
 #   - Pontos do evento so contam para o aluno quando os criterios do
 #     certificado sao cumpridos (check-in + check-out + permanencia >= 75%).
 #   - Penalidade de no-show: o aluno perde exatamente os pontos que aquele
@@ -25,10 +27,12 @@ info:
   title: WECTI API
   description: >
     API central do sistema de controle de acesso a palestras e eventos.
-    Tanto o site do aluno quanto o app Android do operador (professor/admin)
-    consomem exclusivamente esta API - nenhum cliente acessa o banco direto.
-    Este e um RASCUNHO inicial para alinhar o time antes da Fase 1; campos e
-    regras podem mudar conforme o desenvolvimento avança.
+    O site (aluno e admin/professor) consome exclusivamente esta API -
+    nenhum cliente acessa o banco direto. Nao ha app Android dedicado: o
+    check-in/check-out é feito via QR code lido pela câmera nativa do
+    celular do aluno. Este e um RASCUNHO inicial para alinhar o time
+    antes da Fase 1; campos e regras podem mudar conforme o
+    desenvolvimento avança.
   version: 0.1.0-draft
 
 servers:
@@ -47,7 +51,10 @@ tags:
   - name: Eventos
   - name: Inscricoes
   - name: Checkins
-    description: Endpoints usados pelo app Android na entrada/saída do evento
+    description: >
+      Admin/professor gera um QR code por sessão (entrada e depois
+      saída) e projeta na tela; o próprio aluno confirma a presença
+      escaneando com a câmera do celular (Android ou iOS, sem app)
   - name: Certificados
   - name: Pontuacao
 
@@ -93,33 +100,165 @@ paths:
         '401':
           description: Credenciais inválidas
 
+  /auth/registrar:
+    post:
+      tags: [Auth]
+      summary: Cadastro público de aluno ("Primeiro acesso? Crie sua conta")
+      description: >
+        Sempre cria um usuário com perfil ALUNO - não existe campo
+        "perfil" no corpo da requisição, então não tem como quem se
+        autocadastra virar Professor ou Admin por essa via. Cadastro de
+        Professor continua sendo feito só pelo Admin, em POST /usuarios.
+        Já devolve token (igual ao login), pra entrar direto no sistema.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, email, senha, rgm]
+              properties:
+                nome:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                senha:
+                  type: string
+                  format: password
+                  minLength: 6
+                rgm:
+                  type: string
+                  pattern: '^\d{8}$'
+                curso:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Conta criada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  usuario:
+                    $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Dados inválidos (email malformado, RGM fora do formato, senha curta)
+        '409':
+          description: Já existe um usuário com este email ou RGM
+
+  /auth/redefinir-senha:
+    post:
+      tags: [Auth]
+      summary: "\"Esqueci minha senha\" - redefine sem link por email"
+      description: >
+        Sem token/link por email de propósito - não há servidor de email
+        configurado no projeto, e o cliente confirmou que não precisa de
+        autenticação extra. A identidade é confirmada com o RGM (se
+        perfil = aluno) ou CPF (se perfil = professor) já cadastrados -
+        batendo, a pessoa já define a senha nova na mesma chamada. Serve
+        também pro Professor (sempre cadastrado pelo Admin com uma senha
+        provisória que ninguém sabe) definir a primeira senha de verdade.
+        Não cobre reset de conta Admin (sem RGM/CPF) - por design.
+        Já devolve token (igual ao login), pra entrar direto no sistema.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, identificador, nova_senha]
+              properties:
+                email:
+                  type: string
+                  format: email
+                identificador:
+                  type: string
+                  description: RGM (8 dígitos, aluno) ou CPF (11 dígitos, professor)
+                nova_senha:
+                  type: string
+                  format: password
+                  minLength: 6
+      responses:
+        '200':
+          description: Senha redefinida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  usuario:
+                    $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Dados inválidos (email malformado, senha curta)
+        '401':
+          description: Email + RGM/CPF não conferem com nenhum cadastro
+
   # ---------------------------------------------------------------------
   # Usuarios
   # ---------------------------------------------------------------------
   /usuarios:
     get:
       tags: [Usuarios]
-      summary: Lista usuários (somente admin)
+      summary: Lista usuários paginados (somente admin)
+      description: >
+        Paginado de propósito - a lista de usuários cresce muito quando o
+        sistema é liberado pros alunos, devolver tudo de uma vez não
+        escala. "busca" filtra por nome, email, RGM ou CPF (contém, sem
+        diferenciar maiúsculas/minúsculas no nome/email).
       parameters:
         - name: perfil
           in: query
           schema:
             $ref: '#/components/schemas/Perfil'
+        - name: busca
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Página (começando em 0)
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
-          description: Lista de usuários
+          description: Página de usuários
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Usuario'
+                type: object
+                properties:
+                  conteudo:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Usuario'
+                  pagina:
+                    type: integer
+                  tamanho:
+                    type: integer
+                  total_elementos:
+                    type: integer
+                  total_paginas:
+                    type: integer
     post:
       tags: [Usuarios]
       summary: Cadastra aluno ou convidado avulso
       description: >
-        Usado principalmente pelo app Android quando o operador (professor
-        ou admin) precisa cadastrar alguém na hora, na porta do evento.
+        Usado pelo admin/professor direto pelo site quando precisa
+        cadastrar alguém na hora, na porta do evento.
       requestBody:
         required: true
         content:
@@ -133,6 +272,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Usuario'
+
+  /usuarios/{usuarioId}:
+    parameters:
+      - name: usuarioId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Usuarios]
+      summary: Atualiza um usuário (admin ou professor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoUsuario'
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '409':
+          description: Email ou RGM já usado por outro usuário
+    delete:
+      tags: [Usuarios]
+      summary: Exclui um usuário (somente admin)
+      responses:
+        '204':
+          description: Usuário excluído
+        '422':
+          description: Usuário possui inscrições e não pode ser excluído
 
   /usuarios/me:
     get:
@@ -315,9 +489,6 @@ paths:
     post:
       tags: [Inscricoes]
       summary: Aluno se inscreve no evento
-      description: >
-        Ao criar a inscrição, o backend gera o qrcode_token e dispara o
-        e-mail com o QR code para o aluno.
       responses:
         '201':
           description: Inscrição criada
@@ -392,20 +563,56 @@ paths:
         '422':
           description: Prazo de cancelamento (1 dia antes do evento) já passou
 
-  /inscricoes/{inscricaoId}/qrcode:
+  # ---------------------------------------------------------------------
+  # Checkins - por SESSAO de evento (nao mais por aluno)
+  # ---------------------------------------------------------------------
+  # O QR code individual do aluno (gerado na inscricao, enviado por
+  # e-mail) foi removido - nao ha mais app Android dedicado. Agora quem
+  # gera o QR e o admin/professor, um por evento (tipo ENTRADA e depois
+  # tipo SAIDA), projetado na tela pro publico. O aluno le com a camera
+  # do proprio celular (Android ou iOS, sem precisar de app nenhum) - a
+  # camera abre a URL embutida no QR direto no navegador, que chama
+  # POST /checkin-sessoes/{sessaoId}/confirmar autenticado como aluno.
+  /eventos/{eventoId}/checkin-sessoes:
     parameters:
-      - name: inscricaoId
+      - name: eventoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Checkins]
+      summary: Gera uma sessão de check-in/check-out pro evento (admin ou professor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaSessaoCheckin'
+      responses:
+        '201':
+          description: Sessão criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessaoCheckin'
+
+  /checkin-sessoes/{sessaoId}/qrcode:
+    parameters:
+      - name: sessaoId
         in: path
         required: true
         schema:
           type: string
           format: uuid
     get:
-      tags: [Inscricoes]
-      summary: Obtém o QR code da inscrição
+      tags: [Checkins]
+      summary: Imagem do QR code da sessão, pra projetar na tela (admin ou professor)
       description: >
-        Usado pelo site para exibir/baixar o QR code que já foi enviado
-        por e-mail no momento da inscrição.
+        O QR codifica a URL de confirmação
+        (`<frontend>/checkin/confirmar/{sessaoId}`) - a camera do celular
+        do aluno abre direto, sem precisar de app.
       responses:
         '200':
           description: Imagem do QR code
@@ -414,49 +621,12 @@ paths:
               schema:
                 type: string
                 format: binary
-    post:
-      tags: [Inscricoes]
-      summary: Reenvia o QR code por e-mail
-      responses:
-        '202':
-          description: E-mail de reenvio agendado
+        '422':
+          description: Sessão já expirada
 
-  # ---------------------------------------------------------------------
-  # Checkins (consumido pelo app Android)
-  # ---------------------------------------------------------------------
-  /checkins:
-    post:
-      tags: [Checkins]
-      summary: Registra a entrada do aluno no evento
-      description: >
-        Endpoint usado pelo app Android ao escanear o QR code na entrada.
-        Recebe o qrcode_token e, se válido, cria o registro de check-in
-        com o horário de entrada.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [qrcode_token]
-              properties:
-                qrcode_token:
-                  type: string
-      responses:
-        '201':
-          description: Check-in registrado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Checkin'
-        '404':
-          description: QR code inválido ou inscrição não encontrada
-        '409':
-          description: Check-in já realizado para esta inscrição
-
-  /checkins/{checkinId}/checkout:
+  /checkin-sessoes/{sessaoId}/confirmar:
     parameters:
-      - name: checkinId
+      - name: sessaoId
         in: path
         required: true
         schema:
@@ -464,19 +634,22 @@ paths:
           format: uuid
     post:
       tags: [Checkins]
-      summary: Registra a saída do aluno no evento
-      description: >
-        Também usado pelo app Android, escaneando o QR code novamente na
-        saída. Junto com a duração do evento, esse horário é usado para
-        calcular o percentual de presença (mínimo de 75% para liberar
-        certificado e pontuação).
+      summary: Aluno confirma a própria entrada/saída ao escanear o QR
       responses:
         '200':
-          description: Check-out registrado
+          description: Check-in ou check-out confirmado
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Checkin'
+        '404':
+          description: QR code inválido, expirado, ou aluno não inscrito no evento
+        '409':
+          description: Check-in já realizado
+        '422':
+          description: >
+            QR expirado, inscrição cancelada, ou tentativa de check-out
+            sem ter feito check-in antes
 
   # ---------------------------------------------------------------------
   # Certificados
@@ -546,7 +719,7 @@ paths:
       tags: [Pontuacao]
       summary: Pontuação de um aluno especifico em um período (somente admin ou professor)
       description: >
-        Adicionado para o app Android/painel de admin consultarem a
+        Adicionado para o painel de admin/professor consultar a
         pontuação de qualquer aluno, sem depender do token do proprio
         aluno usado em /me/pontuacao.
       responses:
@@ -594,6 +767,23 @@ components:
             Registro Geral do Aluno (RGM) - identificador acadêmico da
             faculdade, com 8 dígitos. Obrigatório e único quando
             perfil = aluno; não se aplica a admin/professor.
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          nullable: true
+          description: >
+            CPF do professor, 11 dígitos. Obrigatório e único quando
+            perfil = professor; não se aplica a admin/aluno.
+        curso:
+          type: string
+          nullable: true
+          description: >
+            Curso do aluno (ex.: "Ciência da Computação") - confirmado
+            com o professor que é só informativo, pra saber quais cursos
+            estão participando das palestras. Não afeta pontuação,
+            elegibilidade pra inscrição nem nenhuma outra regra de
+            negócio - por isso texto livre, opcional, sem unicidade.
+            Não se aplica a admin/professor.
 
     NovoUsuario:
       type: object
@@ -614,6 +804,17 @@ components:
             Obrigatório quando perfil = aluno. O OpenAPI puro não expressa
             "obrigatório somente se outro campo tiver determinado valor",
             então essa regra precisa ser validada no backend.
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          nullable: true
+          description: >
+            Obrigatório quando perfil = professor, pela mesma razão do rgm
+            acima - validado no backend.
+        curso:
+          type: string
+          nullable: true
+          description: Opcional, só informativo (ver descrição em Usuario.curso).
 
     Periodo:
       type: object
@@ -677,6 +878,9 @@ components:
         periodo_id:
           type: string
           format: uuid
+          description: >
+            Preenchido automaticamente pelo backend a partir da data do
+            evento (ver NovoEvento) - nunca informado pelo cliente.
         local:
           type: string
         data_hora_inicio:
@@ -697,15 +901,18 @@ components:
 
     NovoEvento:
       type: object
-      required: [titulo, periodo_id, data_hora_inicio, data_hora_fim, pontos]
+      required: [titulo, data_hora_inicio, data_hora_fim, pontos]
+      description: >
+        Sem periodo_id de proposito: o formulario ja pede data/hora do
+        evento, entao o backend descobre sozinho em qual Periodo
+        (semestre) cadastrado essa data cai (ver EventoService) - se
+        nenhum Periodo cobrir a data, a criacao falha com 422 pedindo
+        pra cadastrar um Periodo pra ela antes (POST /periodos).
       properties:
         titulo:
           type: string
         descricao:
           type: string
-        periodo_id:
-          type: string
-          format: uuid
         local:
           type: string
         data_hora_inicio:
@@ -769,6 +976,36 @@ components:
           type: number
           format: float
           description: Calculado quando há saída registrada
+
+    NovaSessaoCheckin:
+      type: object
+      required: [tipo]
+      properties:
+        tipo:
+          type: string
+          enum: [ENTRADA, SAIDA]
+
+    SessaoCheckin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        evento_id:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum: [ENTRADA, SAIDA]
+        criada_em:
+          type: string
+          format: date-time
+        expira_em:
+          type: string
+          format: date-time
+          description: >
+            Validade do QR code (6 horas após a criação) - depois disso
+            o endpoint de confirmação passa a responder 422.
 
     PontuacaoPeriodo:
       type: object

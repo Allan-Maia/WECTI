@@ -12,7 +12,7 @@ public interface InscricaoRepository extends JpaRepository<Inscricao, UUID> {
     List<Inscricao> findByAlunoId(UUID alunoId);
     List<Inscricao> findByAlunoIdAndStatus(UUID alunoId, InscricaoStatus status);
     List<Inscricao> findByEventoId(UUID eventoId);
-    Optional<Inscricao> findByQrcodeToken(String qrcodeToken);
     Optional<Inscricao> findByAlunoIdAndEventoId(UUID alunoId, UUID eventoId);
     boolean existsByAlunoIdAndEventoId(UUID alunoId, UUID eventoId);
+    boolean existsByAlunoId(UUID alunoId);
 }

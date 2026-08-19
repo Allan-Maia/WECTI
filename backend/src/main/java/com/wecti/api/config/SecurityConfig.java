@@ -87,7 +87,7 @@ public class SecurityConfig {
                                         "acesso_negado", "Perfil sem permissao para esta operacao")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/health", "/auth/login").permitAll()
+                        .requestMatchers("/health", "/auth/login", "/auth/registrar", "/auth/redefinir-senha").permitAll()
                         .requestMatchers("/docs/**", "/api-docs/**", "/swagger-ui/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes").hasRole("ALUNO")
@@ -95,6 +95,8 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/usuarios").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.PUT, "/usuarios/*").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.DELETE, "/usuarios/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/usuarios/me").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/periodos").hasRole("ADMIN")
@@ -112,12 +114,16 @@ public class SecurityConfig {
                         .requestMatchers("/me/pontuacao").hasRole("ALUNO")
                         .requestMatchers("/pontuacao/aluno/*/periodo/*").hasAnyRole("ADMIN", "PROFESSOR")
 
-                        .requestMatchers("/inscricoes/*/qrcode").hasRole("ALUNO")
                         .requestMatchers("/inscricoes/*/certificado").hasRole("ALUNO")
                         .requestMatchers(HttpMethod.DELETE, "/inscricoes/*").hasRole("ALUNO")
                         .requestMatchers(HttpMethod.GET, "/inscricoes/*").authenticated()
 
-                        .requestMatchers("/checkins", "/checkins/*/checkout").hasAnyRole("ADMIN", "PROFESSOR")
+                        // Check-in por sessao (QR gerado pelo evento, nao mais por aluno):
+                        // admin/professor geram o QR de entrada/saida, o proprio aluno
+                        // escaneia e confirma - ver CheckinSessaoController.
+                        .requestMatchers(HttpMethod.POST, "/eventos/*/checkin-sessoes").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.GET, "/checkin-sessoes/*/qrcode").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.POST, "/checkin-sessoes/*/confirmar").hasRole("ALUNO")
 
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);

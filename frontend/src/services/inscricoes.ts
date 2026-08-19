@@ -21,18 +21,6 @@ export function cancelarInscricao(id: string) {
   return api.delete<void>(`/inscricoes/${id}`).then((res) => res.data);
 }
 
-/** Baixa o PNG do QR code autenticado - um <img src> direto nao manda o
- *  header Authorization, entao precisa passar pelo axios e virar blob. */
-export function baixarQrCode(inscricaoId: string) {
-  return api
-    .get(`/inscricoes/${inscricaoId}/qrcode`, { responseType: 'blob' })
-    .then((res) => res.data as Blob);
-}
-
-export function reenviarQrCode(inscricaoId: string) {
-  return api.post<void>(`/inscricoes/${inscricaoId}/qrcode`).then((res) => res.data);
-}
-
 export function urlCertificado(inscricaoId: string) {
   return `${api.defaults.baseURL}/inscricoes/${inscricaoId}/certificado`;
 }

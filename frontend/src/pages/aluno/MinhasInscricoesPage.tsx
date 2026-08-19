@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import PageContainer from '../../components/PageContainer';
 import Badge from '../../components/Badge';
 import Button from '../../components/Button';
-import QrCodeModal from '../../components/QrCodeModal';
 import { LoadingBlock } from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import EmptyState from '../../components/EmptyState';
@@ -18,7 +17,6 @@ export default function MinhasInscricoesPage() {
   const { eventos } = useEventos({});
   const { notificarSucesso, notificarErro } = useToast();
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
-  const [qrCodeAberto, setQrCodeAberto] = useState<string | null>(null);
 
   const eventosPorId = useMemo(() => new Map(eventos.map((e) => [e.id, e])), [eventos]);
 
@@ -61,11 +59,15 @@ export default function MinhasInscricoesPage() {
                     {evento ? formatarDataHora(evento.data_hora_inicio) : ''}
                     {evento?.local ? ` · ${evento.local}` : ''}
                   </p>
+                  <p className="mt-1 text-xs text-text-muted">
+                    {inscricao.checkin?.saida
+                      ? 'Check-in e check-out confirmados'
+                      : inscricao.checkin?.entrada
+                        ? 'Check-in confirmado - falta o check-out'
+                        : 'Presença ainda não confirmada - escaneie o QR code na entrada do evento'}
+                  </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variante="outline" onClick={() => setQrCodeAberto(inscricao.id)}>
-                    Ver QR code
-                  </Button>
                   {inscricao.status === 'ativa' && (
                     <Button
                       variante="danger"
@@ -81,8 +83,6 @@ export default function MinhasInscricoesPage() {
           })}
         </div>
       )}
-
-      {qrCodeAberto && <QrCodeModal inscricaoId={qrCodeAberto} onClose={() => setQrCodeAberto(null)} />}
     </PageContainer>
   );
 }

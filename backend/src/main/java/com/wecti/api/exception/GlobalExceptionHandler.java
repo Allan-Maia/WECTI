@@ -38,8 +38,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({CredenciaisInvalidasException.class, BadCredentialsException.class})
     public ResponseEntity<ErroResponse> handleCredenciaisInvalidas(RuntimeException ex) {
+        // Usa a mensagem da propria excecao (nao mais fixa em "Email ou
+        // senha invalidos") - esse handler tambem cobre o fluxo de
+        // "esqueci minha senha" (UsuarioService.redefinirSenha), onde nao
+        // ha campo "senha" nenhum envolvido na verificacao de identidade;
+        // as duas chamadas ja usam mensagens seguras (sem vazar qual
+        // parte especifica nao bateu).
+        String mensagem = ex.getMessage() != null ? ex.getMessage() : "Email ou senha invalidos";
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ErroResponse.de(401, "credenciais_invalidas", "Email ou senha invalidos"));
+                .body(ErroResponse.de(401, "credenciais_invalidas", mensagem));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

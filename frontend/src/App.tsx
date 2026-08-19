@@ -5,12 +5,15 @@ import { ToastProvider } from './context/ToastContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
+import RegistrarPage from './pages/RegistrarPage';
+import RecuperarSenhaPage from './pages/RecuperarSenhaPage';
 import EventosPage from './pages/aluno/EventosPage';
 import MinhasInscricoesPage from './pages/aluno/MinhasInscricoesPage';
 import HistoricoPage from './pages/aluno/HistoricoPage';
 import CertificadosPage from './pages/aluno/CertificadosPage';
 import PontuacaoPage from './pages/aluno/PontuacaoPage';
 import PerfilPage from './pages/aluno/PerfilPage';
+import CheckinConfirmarPage from './pages/aluno/CheckinConfirmarPage';
 import AdminEventosPage from './pages/admin/AdminEventosPage';
 import AdminUsuariosPage from './pages/admin/AdminUsuariosPage';
 import AdminCheckinPage from './pages/admin/AdminCheckinPage';
@@ -35,6 +38,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<RegistrarPage />} />
+      <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
       <Route path="/" element={<RotaInicial />} />
 
       {/* Aluno */}
@@ -86,6 +91,14 @@ function AppRoutes() {
           </RotaPrivada>
         }
       />
+      <Route
+        path="/checkin/confirmar/:sessaoId"
+        element={
+          <RotaPrivada perfis={['ALUNO']}>
+            <CheckinConfirmarPage />
+          </RotaPrivada>
+        }
+      />
 
       {/* Admin / Professor */}
       <Route
@@ -112,7 +125,6 @@ function AppRoutes() {
           </RotaPrivada>
         }
       />
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

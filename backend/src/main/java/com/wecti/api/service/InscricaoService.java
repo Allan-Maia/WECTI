@@ -29,16 +29,13 @@ public class InscricaoService {
     private final EventoRepository eventoRepository;
     private final UsuarioRepository usuarioRepository;
     private final CheckinRepository checkinRepository;
-    private final EmailService emailService;
 
     public InscricaoService(InscricaoRepository inscricaoRepository, EventoRepository eventoRepository,
-                             UsuarioRepository usuarioRepository, CheckinRepository checkinRepository,
-                             EmailService emailService) {
+                             UsuarioRepository usuarioRepository, CheckinRepository checkinRepository) {
         this.inscricaoRepository = inscricaoRepository;
         this.eventoRepository = eventoRepository;
         this.usuarioRepository = usuarioRepository;
         this.checkinRepository = checkinRepository;
-        this.emailService = emailService;
     }
 
     public Inscricao inscrever(UUID eventoId, UUID alunoId) {
@@ -55,12 +52,8 @@ public class InscricaoService {
                 .aluno(aluno)
                 .evento(evento)
                 .status(InscricaoStatus.ATIVA)
-                .qrcodeToken(UUID.randomUUID().toString())
                 .build();
-        inscricao = inscricaoRepository.save(inscricao);
-
-        emailService.enviarQrCode(inscricao);
-        return inscricao;
+        return inscricaoRepository.save(inscricao);
     }
 
     public void cancelar(UUID inscricaoId, UUID alunoId) {

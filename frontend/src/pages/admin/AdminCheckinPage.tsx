@@ -1,99 +1,133 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PageContainer from '../../components/PageContainer';
 import Button from '../../components/Button';
-import FormField from '../../components/FormField';
-import { registrarEntrada, registrarSaida } from '../../services/checkins';
+import { LoadingBlock } from '../../components/LoadingSpinner';
+import { useEventos } from '../../hooks/useEventos';
+import { criarSessaoCheckin, baixarQrCodeSessao } from '../../services/checkins';
 import { extrairMensagemErro } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { formatarDataHora } from '../../utils/data';
-import type { Checkin } from '../../types';
+import type { SessaoCheckin, TipoSessaoCheckin } from '../../types';
 
 /**
- * O contrato so tem POST /checkins (recebe qrcode_token, registra entrada)
- * e POST /checkins/{id}/checkout (recebe o id interno do checkin) - nao
- * existe um endpoint de busca/consulta por token. Por isso "buscar" aqui
- * e a propria tentativa de registrar entrada; o botao de saida so fica
- * disponivel para o checkin que acabou de ser criado nesta tela.
+ * Admin/professor escolhe o evento e o tipo de sessão (entrada ou saída)
+ * e gera um QR code pra projetar na tela. Cada aluno inscrito escaneia
+ * com a câmera do próprio celular (Android ou iOS, sem app nenhum) - a
+ * câmera abre a URL embutida no QR direto no navegador, que confirma a
+ * presença dele autenticado como aluno. Ver CheckinSessaoController e
+ * docs/openapi.yaml.
  */
 export default function AdminCheckinPage() {
-  const [token, setToken] = useState('');
-  const [checkin, setCheckin] = useState<Checkin | null>(null);
-  const [carregandoEntrada, setCarregandoEntrada] = useState(false);
-  const [carregandoSaida, setCarregandoSaida] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const { notificarSucesso, notificarErro } = useToast();
+  const { eventos, carregando: carregandoEventos } = useEventos({});
+  const { notificarErro } = useToast();
 
-  const buscarERegistrarEntrada = async () => {
-    if (!token.trim()) return;
-    setErro(null);
-    setCarregandoEntrada(true);
+  const [eventoId, setEventoId] = useState('');
+  const [tipo, setTipo] = useState<TipoSessaoCheckin>('ENTRADA');
+  const [sessao, setSessao] = useState<SessaoCheckin | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [gerando, setGerando] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
+    };
+  }, [qrCodeUrl]);
+
+  /** Esconde o QR gerado anteriormente assim que o evento ou o tipo
+   *  mudam - sem isso, o QR (e o link embutido nele) continuavam sendo
+   *  os do evento/tipo antigo, só o texto acima mudava pra refletir a
+   *  nova seleção, dando a falsa impressão de que era o QR certo. */
+  const limparQrCode = () => {
+    setSessao(null);
+    if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
+    setQrCodeUrl(null);
+  };
+
+  const selecionarEvento = (novoEventoId: string) => {
+    setEventoId(novoEventoId);
+    limparQrCode();
+  };
+
+  const selecionarTipo = (novoTipo: TipoSessaoCheckin) => {
+    setTipo(novoTipo);
+    limparQrCode();
+  };
+
+  const gerarQrCode = async () => {
+    if (!eventoId) {
+      notificarErro('Escolha um evento primeiro.');
+      return;
+    }
+    setGerando(true);
+    limparQrCode();
     try {
-      const resultado = await registrarEntrada(token.trim());
-      setCheckin(resultado);
-      notificarSucesso('Entrada registrada com sucesso.');
+      const novaSessao = await criarSessaoCheckin(eventoId, tipo);
+      const blob = await baixarQrCodeSessao(novaSessao.id);
+      setSessao(novaSessao);
+      setQrCodeUrl(URL.createObjectURL(blob));
     } catch (e) {
-      setCheckin(null);
-      setErro(extrairMensagemErro(e, 'QR code inválido ou check-in já realizado.'));
+      notificarErro(extrairMensagemErro(e, 'Não foi possível gerar o QR code.'));
     } finally {
-      setCarregandoEntrada(false);
+      setGerando(false);
     }
   };
 
-  const registrarSaidaDoCheckin = async () => {
-    if (!checkin) return;
-    setCarregandoSaida(true);
-    try {
-      const atualizado = await registrarSaida(checkin.id);
-      setCheckin(atualizado);
-      notificarSucesso('Saída registrada com sucesso.');
-    } catch (e) {
-      notificarErro(extrairMensagemErro(e, 'Não foi possível registrar a saída.'));
-    } finally {
-      setCarregandoSaida(false);
-    }
-  };
+  const eventoSelecionado = eventos.find((e) => e.id === eventoId);
 
   return (
-    <PageContainer titulo="Check-in" descricao="Escaneie ou digite o token do QR code do aluno">
+    <PageContainer
+      titulo="Check-in"
+      descricao="Gere o QR code de entrada ou saída e projete na tela - cada aluno confirma a própria presença escaneando com a câmera do celular"
+    >
       <div className="flex flex-col gap-4 rounded-card border border-border bg-surface p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <FormField
-              label="Token do QR code"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Cole ou escaneie o token aqui"
-            />
-          </div>
-          <Button carregando={carregandoEntrada} onClick={buscarERegistrarEntrada} className="sm:mb-0">
-            Registrar entrada
-          </Button>
-        </div>
+        {carregandoEventos ? (
+          <LoadingBlock mensagem="Carregando eventos..." />
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex flex-1 flex-col gap-1.5 text-sm">
+              <span className="font-medium text-text">Evento</span>
+              <select
+                className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-text outline-none focus:border-accent"
+                value={eventoId}
+                onChange={(e) => selecionarEvento(e.target.value)}
+              >
+                <option value="">Selecione um evento</option>
+                {eventos.map((evento) => (
+                  <option key={evento.id} value={evento.id}>
+                    {evento.titulo}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        {erro && (
-          <p className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">{erro}</p>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-text">Tipo</span>
+              <select
+                className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-text outline-none focus:border-accent"
+                value={tipo}
+                onChange={(e) => selecionarTipo(e.target.value as TipoSessaoCheckin)}
+              >
+                <option value="ENTRADA">Entrada</option>
+                <option value="SAIDA">Saída</option>
+              </select>
+            </label>
+
+            <Button carregando={gerando} onClick={gerarQrCode} className="sm:mb-0">
+              Gerar QR code
+            </Button>
+          </div>
         )}
 
-        {checkin && (
-          <div className="rounded-card border border-accent/30 bg-accent/5 p-5">
-            <p className="text-sm text-text-muted">Entrada registrada em</p>
-            <p className="mb-3 font-semibold text-text">{formatarDataHora(checkin.entrada)}</p>
-
-            {checkin.saida ? (
-              <>
-                <p className="text-sm text-text-muted">Saída registrada em</p>
-                <p className="font-semibold text-text">{formatarDataHora(checkin.saida)}</p>
-                {checkin.percentual_presenca !== null && (
-                  <p className="mt-2 text-sm text-text-muted">
-                    Permanência: <span className="font-semibold text-accent">{checkin.percentual_presenca.toFixed(0)}%</span>
-                  </p>
-                )}
-              </>
-            ) : (
-              <Button carregando={carregandoSaida} onClick={registrarSaidaDoCheckin}>
-                Registrar saída
-              </Button>
-            )}
+        {sessao && qrCodeUrl && (
+          <div className="flex flex-col items-center gap-3 rounded-card border border-accent/30 bg-accent/5 p-8">
+            <p className="text-sm text-text-muted">
+              QR de <span className="font-semibold text-text">{tipo === 'ENTRADA' ? 'entrada' : 'saída'}</span> para
+            </p>
+            <p className="text-lg font-bold text-text">{eventoSelecionado?.titulo}</p>
+            <img src={qrCodeUrl} alt="QR code de check-in" className="h-72 w-72 rounded-lg bg-white p-3" />
+            <p className="text-xs text-text-muted">
+              Válido até {new Date(sessao.expira_em).toLocaleString('pt-BR')} - peça pro aluno escanear com a
+              câmera do próprio celular
+            </p>
           </div>
         )}
       </div>

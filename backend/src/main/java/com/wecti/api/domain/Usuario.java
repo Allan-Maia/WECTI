@@ -55,6 +55,24 @@ public class Usuario {
     @Column(length = 8, unique = true)
     private String rgm;
 
+    /**
+     * CPF do professor - 11 digitos, obrigatorio e unico quando
+     * perfil = PROFESSOR (mesma logica do RGM do aluno), validado no
+     * service. Nao se aplica a admin/aluno.
+     */
+    @Column(length = 11, unique = true)
+    private String cpf;
+
+    /**
+     * Curso do aluno (ex.: "Ciencia da Computacao") - confirmado com o
+     * professor que e so informativo, pra saber quais cursos estao
+     * participando das palestras. Nao afeta pontuacao, elegibilidade nem
+     * nenhuma outra regra de negocio - por isso texto livre, opcional,
+     * sem formato/unicidade exigidos.
+     */
+    @Column(length = 100)
+    private String curso;
+
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;
 

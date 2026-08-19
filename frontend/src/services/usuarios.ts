@@ -1,12 +1,27 @@
 import api from './api';
-import type { NovoUsuario, Perfil, Usuario } from '../types';
+import type { Pagina, NovoUsuario, Perfil, Usuario } from '../types';
 
-export function listarUsuarios(perfil?: Perfil) {
-  return api.get<Usuario[]>('/usuarios', { params: perfil ? { perfil } : {} }).then((res) => res.data);
+export interface FiltroUsuarios {
+  perfil?: Perfil;
+  busca?: string;
+  page?: number;
+  size?: number;
+}
+
+export function listarUsuarios(filtro: FiltroUsuarios = {}) {
+  return api.get<Pagina<Usuario>>('/usuarios', { params: filtro }).then((res) => res.data);
 }
 
 export function criarUsuario(dados: NovoUsuario) {
   return api.post<Usuario>('/usuarios', dados).then((res) => res.data);
+}
+
+export function atualizarUsuario(id: string, dados: NovoUsuario) {
+  return api.put<Usuario>(`/usuarios/${id}`, dados).then((res) => res.data);
+}
+
+export function excluirUsuario(id: string) {
+  return api.delete<void>(`/usuarios/${id}`).then((res) => res.data);
 }
 
 export function buscarMeuUsuario() {

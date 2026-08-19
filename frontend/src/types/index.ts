@@ -18,6 +18,10 @@ export interface Usuario {
   email: string;
   perfil: Perfil;
   rgm: string | null;
+  cpf: string | null;
+  // Curso do aluno (ex.: "Ciencia da Computacao") - so informativo,
+  // confirmado com o professor que nao afeta pontuacao/elegibilidade.
+  curso: string | null;
 }
 
 export interface NovoUsuario {
@@ -25,6 +29,8 @@ export interface NovoUsuario {
   email: string;
   perfil: Perfil;
   rgm?: string | null;
+  cpf?: string | null;
+  curso?: string | null;
 }
 
 export interface Periodo {
@@ -66,7 +72,8 @@ export interface Evento {
 export interface NovoEvento {
   titulo: string;
   descricao?: string;
-  periodo_id: string;
+  // Sem periodo_id aqui de proposito: o backend descobre sozinho o
+  // Periodo (semestre) a partir da data do evento - ver EventoService.
   local?: string;
   data_hora_inicio: string;
   data_hora_fim: string;
@@ -95,6 +102,22 @@ export interface Inscricao {
   certificado_disponivel: boolean;
 }
 
+// Igual ao Perfil: o enum Java (TipoSessaoCheckin.ENTRADA/.SAIDA) e
+// serializado como veio, em maiusculas - a naming strategy SNAKE_CASE
+// so afeta nomes de campo, nao valores de enum.
+export type TipoSessaoCheckin = 'ENTRADA' | 'SAIDA';
+
+/** Sessão de QR code de check-in/check-out gerada pelo admin/professor
+ *  pra um evento - projetada na tela, o aluno confirma a própria presença
+ *  escaneando com a câmera do celular (ver CheckinSessaoController). */
+export interface SessaoCheckin {
+  id: string;
+  evento_id: string;
+  tipo: TipoSessaoCheckin;
+  criada_em: string;
+  expira_em: string;
+}
+
 export type EventoPontuacaoStatus = 'concluido' | 'no_show' | 'cancelado';
 
 export interface EventoPontuacaoItem {
@@ -119,6 +142,35 @@ export interface LoginRequest {
 export interface LoginResponse {
   token: string;
   usuario: Usuario;
+}
+
+// Cadastro publico ("Primeiro acesso? Crie sua conta") - sem campo
+// perfil de proposito: sempre vira ALUNO no backend, nunca escolhido
+// pelo cliente (ver CadastroAlunoRequest no backend).
+export interface CadastroAlunoRequest {
+  nome: string;
+  email: string;
+  senha: string;
+  rgm: string;
+  curso?: string;
+}
+
+// "Esqueci minha senha" - identidade confirmada com RGM (aluno) ou CPF
+// (professor), sem link por email (ver RedefinirSenhaRequest no backend).
+export interface RedefinirSenhaRequest {
+  email: string;
+  identificador: string;
+  nova_senha: string;
+}
+
+// Envelope de paginacao (ver PaginaResponse no backend) - usado nas
+// listagens que crescem muito, ex.: GET /usuarios.
+export interface Pagina<T> {
+  conteudo: T[];
+  pagina: number;
+  tamanho: number;
+  total_elementos: number;
+  total_paginas: number;
 }
 
 export interface ErroResponse {

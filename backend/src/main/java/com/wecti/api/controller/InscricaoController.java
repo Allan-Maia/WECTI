@@ -3,11 +3,8 @@ package com.wecti.api.controller;
 import com.wecti.api.domain.Perfil;
 import com.wecti.api.dto.InscricaoResponse;
 import com.wecti.api.security.AuthenticatedUser;
-import com.wecti.api.service.EmailService;
 import com.wecti.api.service.InscricaoService;
-import com.wecti.api.service.QrCodeService;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,14 +21,9 @@ import java.util.UUID;
 public class InscricaoController {
 
     private final InscricaoService inscricaoService;
-    private final QrCodeService qrCodeService;
-    private final EmailService emailService;
 
-    public InscricaoController(InscricaoService inscricaoService, QrCodeService qrCodeService,
-                                EmailService emailService) {
+    public InscricaoController(InscricaoService inscricaoService) {
         this.inscricaoService = inscricaoService;
-        this.qrCodeService = qrCodeService;
-        this.emailService = emailService;
     }
 
     @PostMapping("/eventos/{eventoId}/inscricoes")
@@ -69,21 +61,5 @@ public class InscricaoController {
                                           @AuthenticationPrincipal AuthenticatedUser autenticado) {
         inscricaoService.cancelar(inscricaoId, autenticado.id());
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/inscricoes/{inscricaoId}/qrcode")
-    public ResponseEntity<byte[]> obterQrCode(@PathVariable UUID inscricaoId,
-                                               @AuthenticationPrincipal AuthenticatedUser autenticado) {
-        var inscricao = inscricaoService.buscarComPermissao(inscricaoId, autenticado.id());
-        byte[] png = qrCodeService.gerarPng(inscricao.getQrcodeToken());
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(png);
-    }
-
-    @PostMapping("/inscricoes/{inscricaoId}/qrcode")
-    public ResponseEntity<Void> reenviarQrCode(@PathVariable UUID inscricaoId,
-                                                @AuthenticationPrincipal AuthenticatedUser autenticado) {
-        var inscricao = inscricaoService.buscarComPermissao(inscricaoId, autenticado.id());
-        emailService.enviarQrCode(inscricao);
-        return ResponseEntity.accepted().build();
     }
 }

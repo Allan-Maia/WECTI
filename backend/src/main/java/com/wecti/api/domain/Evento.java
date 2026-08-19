@@ -2,6 +2,7 @@ package com.wecti.api.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -60,8 +61,16 @@ public class Evento {
     @Column(nullable = false)
     private Integer pontos;
 
+    /**
+     * EAGER de proposito: o controller mapeia Evento -> EventoResponse
+     * fora de uma transacao (open-in-view esta desligado), e @ManyToMany
+     * e LAZY por padrao no Hibernate - acessar essa colecao depois que a
+     * sessao ja fechou (ex.: ao listar eventos) derrubava a request com
+     * LazyInitializationException. Sao poucos palestrantes por evento, o
+     * custo de sempre carregar junto e desprezivel.
+     */
     @Builder.Default
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "evento_palestrante",
             joinColumns = @JoinColumn(name = "evento_id"),

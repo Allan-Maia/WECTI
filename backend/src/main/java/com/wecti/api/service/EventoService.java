@@ -56,7 +56,7 @@ public class EventoService {
     public Evento criar(NovoEventoRequest request) {
         validarDatas(request);
         Evento evento = Evento.builder()
-                .periodo(buscarPeriodo(request.periodoId()))
+                .periodo(buscarPeriodoPelaData(request.dataHoraInicio()))
                 .titulo(request.titulo())
                 .descricao(request.descricao())
                 .local(request.local())
@@ -71,7 +71,7 @@ public class EventoService {
     public Evento atualizar(UUID id, NovoEventoRequest request) {
         validarDatas(request);
         Evento evento = buscarPorId(id);
-        evento.setPeriodo(buscarPeriodo(request.periodoId()));
+        evento.setPeriodo(buscarPeriodoPelaData(request.dataHoraInicio()));
         evento.setTitulo(request.titulo());
         evento.setDescricao(request.descricao());
         evento.setLocal(request.local());
@@ -96,9 +96,21 @@ public class EventoService {
         }
     }
 
-    private com.wecti.api.domain.Periodo buscarPeriodo(UUID periodoId) {
-        return periodoRepository.findById(periodoId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Periodo nao encontrado: " + periodoId));
+    /**
+     * O admin nao escolhe mais o Periodo manualmente (o formulario ja tem
+     * data/hora do evento, que basta) - descobrimos sozinhos em qual
+     * Periodo cadastrado a data do evento cai. Se nenhum Periodo cobrir
+     * essa data, quem esta cadastrando o evento precisa cadastrar um
+     * Periodo pra ela antes (por API - POST /periodos).
+     */
+    private com.wecti.api.domain.Periodo buscarPeriodoPelaData(LocalDateTime dataHoraInicio) {
+        List<com.wecti.api.domain.Periodo> periodos = periodoRepository.findQueContem(dataHoraInicio.toLocalDate());
+        if (periodos.isEmpty()) {
+            throw new RegraNegocioException(
+                    "Nao existe um Periodo cadastrado que cubra a data do evento (" + dataHoraInicio.toLocalDate()
+                            + "). Cadastre um Periodo com esse intervalo antes de criar o evento.");
+        }
+        return periodos.get(0);
     }
 
     private Set<com.wecti.api.domain.Palestrante> buscarPalestrantes(List<UUID> palestranteIds) {
