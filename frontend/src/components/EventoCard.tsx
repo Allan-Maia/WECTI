@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Evento } from '../types';
 import { formatarDataHora } from '../utils/data';
+import EventoStatusBadge from './EventoStatusBadge';
 
 interface Props {
   evento: Evento;
@@ -18,6 +19,8 @@ export default function EventoCard({ evento, acao }: Props) {
           {evento.pontos} pts
         </span>
       </div>
+
+      <EventoStatusBadge dataHoraInicio={evento.data_hora_inicio} dataHoraFim={evento.data_hora_fim} />
 
       {evento.descricao && <p className="line-clamp-2 text-sm text-text-muted">{evento.descricao}</p>}
 

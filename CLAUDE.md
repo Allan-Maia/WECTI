@@ -12,10 +12,11 @@ clientes, mas só uma fonte de verdade:
 - **Backend (API REST)** - pasta `backend/` deste repositório. É o único
   que fala com o banco de dados. Ninguém mais acessa o MySQL direto.
 - **Web do aluno** - autoatendimento (inscrição, histórico, certificado,
-  cancelamento, QR code). Consome a API, não acessa o banco.
-- **App Android** - usado só por professor e admin, para escanear o QR
-  code na entrada/saída do evento e, eventualmente, cadastrar aluno ou
-  convidado na hora. Não existe perfil "operador" separado.
+  cancelamento, check-in/check-out via QR code lido pela câmera do
+  celular). Consome a API, não acessa o banco.
+- **Web do admin** - cadastra eventos e usuários, gera o QR code de
+  check-in/check-out de cada evento (projetado na tela pro aluno
+  escanear com a câmera do próprio celular - sem app dedicado).
 
 O contrato de API (fonte de verdade dos endpoints) está em
 `docs/openapi.yaml`. Qualquer endpoint novo ou alterado deve ser refletido
@@ -23,7 +24,23 @@ lá primeiro, antes de implementar.
 
 ## Perfis de usuário
 
-`admin`, `professor`, `aluno` (enum `Perfil`). Não existe perfil "operador".
+`admin`, `aluno` (enum `Perfil`) são os únicos perfis ativos nesta
+versão - confirmado com o professor (stakeholder do projeto): não existe
+perfil "operador", e o perfil `professor` (que existia numa versão
+anterior) não é mais oferecido no cadastro nem tem tela própria. Ele
+continua existindo no enum só por compatibilidade com cadastros que já
+existiam no banco antes dessa mudança - uma conta assim ainda consegue
+logar, mas não tem acesso a nada além do que qualquer usuário autenticado
+tem (não é redirecionada num loop - ver `homeDoPerfil` no frontend e o
+comentário em `SecurityConfig.java`). Não inventar volta desse perfil sem
+confirmar de novo.
+
+- **Admin**: cadastra eventos e usuários (só Aluno ou Admin), gera os QR
+  codes de check-in/check-out, acompanha a lista de presença.
+- **Aluno**: se autocadastra (nome, RGM, email, senha - ver
+  `CadastroAlunoRequest`), escolhe os eventos em que participa, confirma
+  a própria presença escaneando o QR code, acompanha pontuação e emite
+  certificado.
 
 ## Regras de negócio já fechadas (não inventar alternativa)
 

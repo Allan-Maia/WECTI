@@ -10,17 +10,42 @@ import { paraInputDateTime } from '../../utils/data';
 
 // Sem periodo_id aqui: o backend descobre sozinho o Periodo (semestre) a
 // partir da data do evento - ver EventoService.buscarPeriodoPelaData.
-const schema = z.object({
-  titulo: z.string().min(1, 'Informe o título'),
-  descricao: z.string().optional(),
-  local: z.string().optional(),
-  data_hora_inicio: z.string().min(1, 'Informe a data de início'),
-  data_hora_fim: z.string().min(1, 'Informe a data de término'),
-  pontos: z.coerce.number().int('Deve ser um número inteiro').min(0, 'Não pode ser negativo'),
-});
+//
+// O schema é uma função (não um objeto fixo) porque a validação de "início
+// não pode ser no passado" só faz sentido pra data nova - editando um
+// evento que já começou (ou já terminou) sem mexer no campo de início,
+// não faz sentido barrar o salvamento só por causa da data original já
+// ter passado (ex.: corrigir a descrição ou os pontos de um evento
+// encerrado). `valorOriginalInicio` é o valor de início como veio no
+// formulário (evento existente) - só valida contra "agora" se for um
+// evento novo ou se o valor foi alterado.
+function construirSchema(valorOriginalInicio: string | undefined) {
+  return z
+    .object({
+      titulo: z.string().min(1, 'Informe o título'),
+      descricao: z.string().optional(),
+      local: z.string().optional(),
+      data_hora_inicio: z.string().min(1, 'Informe a data de início'),
+      data_hora_fim: z.string().min(1, 'Informe a data de término'),
+      pontos: z.coerce.number().int('Deve ser um número inteiro').min(0, 'Não pode ser negativo'),
+    })
+    .refine(
+      (dados) =>
+        dados.data_hora_inicio === valorOriginalInicio || new Date(dados.data_hora_inicio) >= new Date(),
+      {
+        message: 'A data de início não pode ser no passado.',
+        path: ['data_hora_inicio'],
+      },
+    )
+    .refine((dados) => new Date(dados.data_hora_fim) > new Date(dados.data_hora_inicio), {
+      message: 'A data de término deve ser após o início.',
+      path: ['data_hora_fim'],
+    });
+}
 
-type FormInput = z.input<typeof schema>;
-type FormValues = z.output<typeof schema>;
+type EventoSchema = ReturnType<typeof construirSchema>;
+type FormInput = z.input<EventoSchema>;
+type FormValues = z.output<EventoSchema>;
 
 interface Props {
   evento?: Evento | null;
@@ -38,12 +63,14 @@ export default function EventoFormModal({ evento, onSalvar, onFechar }: Props) {
     listarPalestrantes().then(setPalestrantes).catch(() => setPalestrantes([]));
   }, []);
 
+  const valorOriginalInicio = evento ? paraInputDateTime(evento.data_hora_inicio) : undefined;
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormInput, unknown, FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(construirSchema(valorOriginalInicio)),
     defaultValues: evento
       ? {
           titulo: evento.titulo,

@@ -56,9 +56,10 @@ public class Usuario {
     private String rgm;
 
     /**
-     * CPF do professor - 11 digitos, obrigatorio e unico quando
-     * perfil = PROFESSOR (mesma logica do RGM do aluno), validado no
-     * service. Nao se aplica a admin/aluno.
+     * CPF do admin - 11 digitos, obrigatorio e unico quando
+     * perfil = ADMIN (mesma logica do RGM do aluno; e o identificador
+     * usado no "esqueci minha senha"), validado no service. Nao se
+     * aplica a aluno.
      */
     @Column(length = 11, unique = true)
     private String cpf;

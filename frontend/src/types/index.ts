@@ -4,13 +4,13 @@
 // mapeamento intermediaria.
 
 /**
- * O contrato (docs/openapi.yaml) documenta o enum Perfil em minusculas
- * (admin/professor/aluno), mas o backend serializa o enum Java como veio
- * (maiusculas: ADMIN/PROFESSOR/ALUNO) - e isso que a API realmente
- * devolve e espera em NovoUsuario.perfil. Usamos maiusculas aqui para
- * bater com o comportamento real.
+ * So ADMIN e ALUNO - confirmado com o stakeholder do projeto que esta
+ * versao nao precisa de um perfil PROFESSOR separado. O contrato
+ * (docs/openapi.yaml) documenta o enum Perfil em minusculas, mas o
+ * backend serializa o enum Java como veio (maiusculas) - e isso que a
+ * API realmente devolve e espera em NovoUsuario.perfil.
  */
-export type Perfil = 'ADMIN' | 'PROFESSOR' | 'ALUNO';
+export type Perfil = 'ADMIN' | 'ALUNO';
 
 export interface Usuario {
   id: string;
@@ -100,6 +100,17 @@ export interface Inscricao {
   cancelada_em: string | null;
   checkin: Checkin | null;
   certificado_disponivel: boolean;
+}
+
+/** Linha do relatório de presença (GET /eventos/{id}/checkins) - "Participantes do Evento". */
+export interface EventoCheckin {
+  inscricao_id: string;
+  aluno_id: string;
+  aluno_nome: string;
+  aluno_rgm: string | null;
+  entrada: string;
+  saida: string | null;
+  percentual_presenca: number | null;
 }
 
 // Igual ao Perfil: o enum Java (TipoSessaoCheckin.ENTRADA/.SAIDA) e

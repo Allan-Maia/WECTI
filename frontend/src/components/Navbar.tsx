@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { useAuth } from '../context/AuthContext';
+import { homeDoPerfil } from '../utils/rotas';
 
 interface ItemMenu {
   to: string;
@@ -34,8 +35,8 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', aoRolar);
   }, []);
 
-  const itens = perfil === 'ADMIN' || perfil === 'PROFESSOR' ? MENU_ADMIN : MENU_ALUNO;
-  const perfilInicial = perfil === 'ALUNO' ? '/eventos' : '/admin/eventos';
+  const itens = perfil === 'ADMIN' ? MENU_ADMIN : MENU_ALUNO;
+  const perfilInicial = homeDoPerfil(perfil);
 
   const handleSair = () => {
     sair();

@@ -9,6 +9,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Registra entrada/saida a partir de uma Inscricao ja identificada (pelo
@@ -56,5 +58,13 @@ public class CheckinService {
 
         checkin.setSaida(LocalDateTime.now());
         return checkinRepository.save(checkin);
+    }
+
+    /** Relatório de presença (AdminCheckinPage - "Participantes do
+     *  Evento") - quem já fez check-in nesse evento, com ou sem check-out
+     *  ainda. A existência do evento é validada por quem chama (ver
+     *  CheckinSessaoController). */
+    public List<Checkin> listarPorEvento(UUID eventoId) {
+        return checkinRepository.findByInscricao_Evento_IdOrderByEntradaAsc(eventoId);
     }
 }

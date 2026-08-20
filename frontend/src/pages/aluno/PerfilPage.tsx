@@ -8,7 +8,6 @@ import type { Usuario } from '../../types';
 
 const LABEL_PERFIL: Record<string, string> = {
   ADMIN: 'Administrador',
-  PROFESSOR: 'Professor',
   ALUNO: 'Aluno',
 };
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { homeDoPerfil } from '../utils/rotas';
 import type { Perfil } from '../types';
 
 interface Props {
@@ -22,8 +23,7 @@ export default function ProtectedRoute({ children, perfis }: Props) {
   }
 
   if (perfis && perfil && !perfis.includes(perfil)) {
-    const home = perfil === 'ALUNO' ? '/eventos' : '/admin/eventos';
-    return <Navigate to={home} replace />;
+    return <Navigate to={homeDoPerfil(perfil)} replace />;
   }
 
   return <>{children}</>;

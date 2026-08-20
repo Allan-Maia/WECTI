@@ -17,11 +17,17 @@ app:
     driver-class-name: com.mysql.cj.jdbc.Driver
   cors:
     # Origens que podem chamar a API do navegador (politica de CORS, ver
-    # SecurityConfig.corsConfigurationSource). Em producao, defina
-    # CORS_ALLOWED_ORIGINS com o dominio real do frontend (varias origens
-    # separadas por virgula) assim que ele for publicado - sem isso, o
-    # navegador bloqueia toda chamada do site pra essa API.
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    # SecurityConfig.corsConfigurationSource - usa allowedOriginPatterns,
+    # entao "*" aqui funciona como coringa de verdade). Em producao,
+    # defina CORS_ALLOWED_ORIGINS com o dominio real do frontend (varias
+    # origens separadas por virgula) assim que ele for publicado - sem
+    # isso, o navegador bloqueia toda chamada do site pra essa API.
+    #
+    # O padrao de dev inclui 192.168.*.*/10.*.*.* pra cobrir testar o
+    # site de outro aparelho na mesma rede Wi-Fi (ex.: celular acessando
+    # http://<ip-do-notebook>:5173) - sem isso, so "localhost" mesmo
+    # conseguia logar.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://192.168.*.*:5173,http://10.*.*.*:5173}
   # URL do frontend usada pra montar o link embutido no QR code de
   # check-in/check-out (CheckinSessaoController) - o aluno escaneia com a
   # camera do celular, que abre essa URL direto, sem precisar de app.

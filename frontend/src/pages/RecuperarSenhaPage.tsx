@@ -12,13 +12,14 @@ import { extrairMensagemErro } from '../services/api';
 // Sem link/token por email de proposito (nao ha servidor de email
 // configurado, e o professor confirmou que nao precisa de mais
 // autenticacao) - a identidade e confirmada com o RGM (aluno) ou CPF
-// (professor) que ja foi cadastrado, e a pessoa define a senha nova na
-// hora. Serve tambem pro Professor (cadastrado pelo Admin com uma senha
-// provisoria que ninguem sabe) definir a primeira senha de verdade.
+// (professor/admin) que ja foi cadastrado, e a pessoa define a senha
+// nova na hora. Serve tambem pro Professor/Admin (cadastrados por outro
+// Admin com uma senha provisoria que ninguem sabe) definirem a primeira
+// senha de verdade.
 const schema = z
   .object({
     email: z.string().min(1, 'Informe o email').email('Email inválido'),
-    identificador: z.string().min(1, 'Informe seu RGM (aluno) ou CPF (professor)'),
+    identificador: z.string().min(1, 'Informe seu RGM (aluno) ou CPF (professor/admin)'),
     novaSenha: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
     confirmarSenha: z.string().min(1, 'Confirme a senha'),
   })
@@ -80,7 +81,7 @@ export default function RecuperarSenhaPage() {
           <div className="mb-2 text-center">
             <h1 className="text-lg font-bold text-text">Esqueci minha senha</h1>
             <p className="mt-1 text-sm text-text-muted">
-              Confirme seu email e RGM (aluno) ou CPF (professor) para definir uma senha nova
+              Confirme seu email e RGM (aluno) ou CPF (professor/admin) para definir uma senha nova
             </p>
           </div>
 

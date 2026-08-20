@@ -1,5 +1,5 @@
 import api from './api';
-import type { Checkin, SessaoCheckin, TipoSessaoCheckin } from '../types';
+import type { Checkin, EventoCheckin, SessaoCheckin, TipoSessaoCheckin } from '../types';
 
 /** Admin/professor gera uma sessão de check-in (entrada) ou check-out
  *  (saída) pro evento - o QR resultante fica válido por 6 horas. */
@@ -18,4 +18,10 @@ export function baixarQrCodeSessao(sessaoId: string) {
 /** Chamado pelo aluno ao escanear o QR com a câmera do celular. */
 export function confirmarCheckinSessao(sessaoId: string) {
   return api.post<Checkin>(`/checkin-sessoes/${sessaoId}/confirmar`).then((res) => res.data);
+}
+
+/** Relatório de presença (admin/professor) - quem já fez check-in nesse
+ *  evento, com nome/RGM do aluno. */
+export function listarCheckinsDoEvento(eventoId: string) {
+  return api.get<EventoCheckin[]>(`/eventos/${eventoId}/checkins`).then((res) => res.data);
 }

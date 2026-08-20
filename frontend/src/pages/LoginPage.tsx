@@ -8,6 +8,7 @@ import Button from '../components/Button';
 import FormField from '../components/FormField';
 import { useAuth } from '../context/AuthContext';
 import { extrairMensagemErro } from '../services/api';
+import { homeDoPerfil } from '../utils/rotas';
 
 const schema = z.object({
   email: z.string().min(1, 'Informe o email').email('Email invalido'),
@@ -38,7 +39,7 @@ export default function LoginPage() {
       // check-in escaneado sem estar logado), volta pra ela em vez de
       // sempre mandar pra home do perfil.
       const destino = (location.state as { from?: Pick<Location, 'pathname' | 'search'> } | null)?.from;
-      navigate(destino ? `${destino.pathname}${destino.search ?? ''}` : usuario.perfil === 'ALUNO' ? '/eventos' : '/admin/eventos', {
+      navigate(destino ? `${destino.pathname}${destino.search ?? ''}` : homeDoPerfil(usuario.perfil), {
         replace: true,
       });
     } catch (erro) {

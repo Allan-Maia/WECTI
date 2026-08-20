@@ -10,7 +10,7 @@ const schema = z
   .object({
     nome: z.string().min(1, 'Informe o nome'),
     email: z.string().min(1, 'Informe o email').email('Email inválido'),
-    perfil: z.enum(['ADMIN', 'PROFESSOR', 'ALUNO']),
+    perfil: z.enum(['ADMIN', 'ALUNO']),
     rgm: z.string().optional(),
     cpf: z.string().optional(),
     // So informativo (confirmado com o professor) - sem formato exigido.
@@ -20,12 +20,18 @@ const schema = z
     message: 'RGM obrigatório (8 dígitos) para perfil Aluno',
     path: ['rgm'],
   })
-  .refine((dados) => dados.perfil !== 'PROFESSOR' || /^\d{11}$/.test(dados.cpf ?? ''), {
-    message: 'CPF obrigatório (11 dígitos) para perfil Professor',
+  // CPF é o identificador usado no "esqueci minha senha"
+  // (RecuperarSenhaPage) pro Admin - sem ele, um Admin cadastrado por
+  // outro Admin nunca teria como definir a própria senha (a provisória
+  // gerada no cadastro nunca é revelada pra ninguém).
+  .refine((dados) => dados.perfil !== 'ADMIN' || /^\d{11}$/.test(dados.cpf ?? ''), {
+    message: 'CPF obrigatório (11 dígitos) para perfil Administrador',
     path: ['cpf'],
   });
 
 type FormValues = z.infer<typeof schema>;
+
+const AJUDA_NUMERICO = 'Digite apenas números, sem pontos ou traços.';
 
 interface Props {
   usuario?: Usuario | null;
@@ -36,6 +42,9 @@ interface Props {
 export default function UsuarioFormModal({ usuario, onSalvar, onFechar }: Props) {
   const [salvando, setSalvando] = useState(false);
   const [erroGeral, setErroGeral] = useState<string | null>(null);
+  // Ajuda ("digite só números...") só aparece enquanto o campo está
+  // focado, como pedido - não fica poluindo a tela o tempo todo.
+  const [campoFocado, setCampoFocado] = useState<'rgm' | 'cpf' | null>(null);
 
   const {
     register,
@@ -44,6 +53,15 @@ export default function UsuarioFormModal({ usuario, onSalvar, onFechar }: Props)
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    // Sem isso, trocar o Perfil no meio do preenchimento (ex.: Aluno ->
+    // Admin) deixava um valor "" órfão em rgm/cpf - o campo some da tela
+    // quando o perfil muda, mas o React Hook Form mantém o valor antigo
+    // registrado por padrão, então esse "" ia junto no corpo da
+    // requisição. O backend rejeita isso (o @Pattern do DTO valida ""
+    // contra o formato, mesmo não sendo obrigatório pra esse perfil) -
+    // shouldUnregister remove o valor do formulário assim que o campo
+    // desmonta, corrigindo na raiz em vez de tratar cada campo.
+    shouldUnregister: true,
     defaultValues: usuario
       ? {
           nome: usuario.nome,
@@ -70,6 +88,9 @@ export default function UsuarioFormModal({ usuario, onSalvar, onFechar }: Props)
     }
   };
 
+  const { onBlur: onBlurRgm, ...registroRgm } = register('rgm');
+  const { onBlur: onBlurCpf, ...registroCpf } = register('cpf');
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4" onClick={onFechar}>
       <form
@@ -79,9 +100,9 @@ export default function UsuarioFormModal({ usuario, onSalvar, onFechar }: Props)
       >
         <h2 className="text-lg font-bold text-text">{usuario ? 'Editar usuário' : 'Novo usuário'}</h2>
 
-        <FormField label="Nome" erro={errors.nome?.message} registro={register('nome')} />
-        <FormField label="Email" type="email" erro={errors.email?.message} registro={register('email')} />
-
+        {/* Perfil primeiro - os campos específicos de cada perfil só
+         *  fazem sentido depois de saber qual foi escolhido. Só Aluno e
+         *  Admin (confirmado com o stakeholder do projeto). */}
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-text">Perfil</span>
           <select
@@ -89,14 +110,29 @@ export default function UsuarioFormModal({ usuario, onSalvar, onFechar }: Props)
             {...register('perfil')}
           >
             <option value="ALUNO">Aluno</option>
-            <option value="PROFESSOR">Professor</option>
             <option value="ADMIN">Administrador</option>
           </select>
         </label>
 
+        <FormField label="Nome" erro={errors.nome?.message} registro={register('nome')} />
+        <FormField label="Email" type="email" erro={errors.email?.message} registro={register('email')} />
+
         {perfil === 'ALUNO' && (
           <>
-            <FormField label="RGM (8 dígitos)" maxLength={8} erro={errors.rgm?.message} registro={register('rgm')} />
+            <div>
+              <FormField
+                label="RGM (8 dígitos)"
+                maxLength={8}
+                erro={errors.rgm?.message}
+                registro={registroRgm}
+                onFocus={() => setCampoFocado('rgm')}
+                onBlur={(e) => {
+                  setCampoFocado(null);
+                  onBlurRgm(e);
+                }}
+              />
+              {campoFocado === 'rgm' && <p className="mt-1 text-xs text-text-muted">{AJUDA_NUMERICO}</p>}
+            </div>
             <FormField
               label="Curso (opcional)"
               placeholder="Ex.: Ciência da Computação"
@@ -106,8 +142,21 @@ export default function UsuarioFormModal({ usuario, onSalvar, onFechar }: Props)
           </>
         )}
 
-        {perfil === 'PROFESSOR' && (
-          <FormField label="CPF (11 dígitos)" maxLength={11} erro={errors.cpf?.message} registro={register('cpf')} />
+        {perfil === 'ADMIN' && (
+          <div>
+            <FormField
+              label="CPF (11 dígitos)"
+              maxLength={11}
+              erro={errors.cpf?.message}
+              registro={registroCpf}
+              onFocus={() => setCampoFocado('cpf')}
+              onBlur={(e) => {
+                setCampoFocado(null);
+                onBlurCpf(e);
+              }}
+            />
+            {campoFocado === 'cpf' && <p className="mt-1 text-xs text-text-muted">{AJUDA_NUMERICO}</p>}
+          </div>
         )}
 
         {erroGeral && (

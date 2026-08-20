@@ -30,3 +30,16 @@ export function paraInputDateTime(iso: string | null | undefined): string {
   if (!iso) return '';
   return iso.slice(0, 16);
 }
+
+export type StatusEvento = 'finalizado' | 'em_andamento' | 'nao_iniciado';
+
+/** Status calculado no frontend (sem campo novo no banco) a partir das
+ *  datas do evento e do horário atual. */
+export function statusEvento(dataHoraInicio: string, dataHoraFim: string): StatusEvento {
+  const agora = new Date();
+  const inicio = new Date(dataHoraInicio);
+  const fim = new Date(dataHoraFim);
+  if (fim < agora) return 'finalizado';
+  if (inicio <= agora && agora <= fim) return 'em_andamento';
+  return 'nao_iniciado';
+}

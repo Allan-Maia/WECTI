@@ -7,14 +7,22 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record CheckinResponse(
-        UUID id,
+/**
+ * Linha do relatório de presença de um evento (AdminCheckinPage -
+ * "Participantes do Evento") - já traz nome/RGM do aluno, sem o front
+ * precisar cruzar com GET /usuarios.
+ */
+public record EventoCheckinResponse(
         UUID inscricaoId,
+        UUID alunoId,
+        String alunoNome,
+        String alunoRgm,
         LocalDateTime entrada,
         LocalDateTime saida,
         Float percentualPresenca) {
 
-    public static CheckinResponse de(Checkin checkin, Evento evento) {
+    public static EventoCheckinResponse de(Checkin checkin, Evento evento) {
+        var aluno = checkin.getInscricao().getAluno();
         Float percentual = null;
         if (checkin.getSaida() != null) {
             // Segundos, nao minutos - toMinutes() trunca a fracao e distorce
@@ -23,7 +31,7 @@ public record CheckinResponse(
             long permanencia = Duration.between(checkin.getEntrada(), checkin.getSaida()).toSeconds();
             percentual = duracaoEvento > 0 ? (float) (100.0 * permanencia / duracaoEvento) : 0f;
         }
-        return new CheckinResponse(checkin.getId(), checkin.getInscricao().getId(),
-                checkin.getEntrada(), checkin.getSaida(), percentual);
+        return new EventoCheckinResponse(checkin.getInscricao().getId(), aluno.getId(), aluno.getNome(),
+                aluno.getRgm(), checkin.getEntrada(), checkin.getSaida(), percentual);
     }
 }

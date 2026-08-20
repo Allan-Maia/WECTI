@@ -1,11 +1,15 @@
 package com.wecti.api.controller;
 
 import com.wecti.api.dto.CheckinResponse;
+import com.wecti.api.dto.EventoCheckinResponse;
 import com.wecti.api.dto.NovaSessaoCheckinRequest;
 import com.wecti.api.dto.SessaoCheckinResponse;
 import com.wecti.api.security.AuthenticatedUser;
 import com.wecti.api.service.CheckinSessaoService;
+import com.wecti.api.service.CheckinService;
+import com.wecti.api.service.EventoService;
 import com.wecti.api.service.QrCodeService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -18,20 +22,36 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 public class CheckinSessaoController {
 
     private final CheckinSessaoService checkinSessaoService;
+    private final CheckinService checkinService;
+    private final EventoService eventoService;
     private final QrCodeService qrCodeService;
     private final String frontendUrl;
 
-    public CheckinSessaoController(CheckinSessaoService checkinSessaoService, QrCodeService qrCodeService,
+    public CheckinSessaoController(CheckinSessaoService checkinSessaoService, CheckinService checkinService,
+                                    EventoService eventoService, QrCodeService qrCodeService,
                                     @Value("${app.frontend-url}") String frontendUrl) {
         this.checkinSessaoService = checkinSessaoService;
+        this.checkinService = checkinService;
+        this.eventoService = eventoService;
         this.qrCodeService = qrCodeService;
         this.frontendUrl = frontendUrl;
+    }
+
+    /** Relatório de presença (AdminCheckinPage - "Participantes do
+     *  Evento") - lista quem já fez check-in nesse evento, com nome/RGM. */
+    @GetMapping("/eventos/{eventoId}/checkins")
+    public List<EventoCheckinResponse> listarCheckinsDoEvento(@PathVariable UUID eventoId) {
+        var evento = eventoService.buscarPorId(eventoId);
+        return checkinService.listarPorEvento(eventoId).stream()
+                .map(checkin -> EventoCheckinResponse.de(checkin, evento))
+                .toList();
     }
 
     @PostMapping("/eventos/{eventoId}/checkin-sessoes")
@@ -41,10 +61,28 @@ public class CheckinSessaoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(SessaoCheckinResponse.de(sessao));
     }
 
+    /**
+     * O link embutido no QR precisa ser um endereço que o CELULAR de quem
+     * escaneia consiga abrir - "app.frontend-url" fixo (default
+     * http://localhost:5173) só funciona quando quem escaneia é a MESMA
+     * máquina que roda o backend, o que nunca é o caso na prática (é
+     * sempre outro aparelho). Em vez disso, usamos o header Origin da
+     * própria requisição: é o admin logado, pelo navegador, quem está
+     * pedindo esse QR code pra projetar na tela - o Origin dessa
+     * requisição É exatamente a URL do site que ele está usando agora
+     * (http://192.168.x.x:5173 numa rede local, https://dominio-real.com
+     * em produção), então é isso que o aluno também vai conseguir abrir.
+     * "app.frontend-url" fica só como fallback pra chamadas sem Origin
+     * (raro num navegador de verdade). Confiável aqui porque o CORS já
+     * filtrou quais Origins conseguem completar essa chamada autenticada
+     * antes desse código rodar.
+     */
     @GetMapping("/checkin-sessoes/{sessaoId}/qrcode")
-    public ResponseEntity<byte[]> qrcode(@PathVariable UUID sessaoId) {
+    public ResponseEntity<byte[]> qrcode(@PathVariable UUID sessaoId, HttpServletRequest request) {
         checkinSessaoService.buscarValida(sessaoId);
-        String url = frontendUrl + "/checkin/confirmar/" + sessaoId;
+        String origin = request.getHeader("Origin");
+        String base = (origin != null && !origin.isBlank()) ? origin : frontendUrl;
+        String url = base + "/checkin/confirmar/" + sessaoId;
         byte[] png = qrCodeService.gerarPng(url);
         return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(png);
     }

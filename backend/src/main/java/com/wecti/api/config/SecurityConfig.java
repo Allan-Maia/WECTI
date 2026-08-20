@@ -24,10 +24,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Regras reais de autorizacao por perfil (admin/professor/aluno), via JWT
- * stateless. Substitui o permitAll do esqueleto inicial - ver
- * docs/openapi.yaml para o mapeamento endpoint -> perfil combinado com o
- * time.
+ * Regras reais de autorizacao por perfil (so ADMIN e ALUNO - confirmado
+ * com o stakeholder do projeto), via JWT stateless. Substitui o
+ * permitAll do esqueleto inicial - ver docs/openapi.yaml para o
+ * mapeamento endpoint -> perfil combinado com o time.
  */
 @Configuration
 @EnableWebSecurity
@@ -43,15 +43,24 @@ public class SecurityConfig {
      * http://localhost:5173 em dev, ou o dominio de producao do site) pro
      * backend (outra origem/porta) - a politica de CORS e do navegador,
      * "curl" e Postman nao aplicam ela, por isso funcionava testando por
-     * fora mas nao pela tela de login de verdade. Configure
-     * CORS_ALLOWED_ORIGINS (lista separada por virgula) quando o frontend
-     * for pro ar em producao - por padrao so libera o Vite local.
+     * fora mas nao pela tela de login de verdade.
+     *
+     * O valor padrao (usado quando CORS_ALLOWED_ORIGINS nao esta
+     * definida) fica em application.yml, nao aqui - de proposito: assim
+     * so existe UM lugar pra olhar/editar (esse @Value nao tem default
+     * inline justamente pra nao criar dois defaults divergentes por
+     * engano, como ja aconteceu). Usa PATTERNS (nao origens exatas) pra
+     * cobrir tambem o cenario de testar o site de outro aparelho na
+     * mesma rede Wi-Fi (celular acessando http://<ip-do-notebook>:5173) -
+     * ver o comentario em application.yml pros detalhes.
+     * allowedOriginPatterns funciona junto com allowCredentials(true);
+     * allowedOrigins com "*" nao funcionaria.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:5173}") List<String> origensPermitidas) {
+            @Value("${app.cors.allowed-origins}") List<String> origensPermitidas) {
         CorsConfiguration configuracao = new CorsConfiguration();
-        configuracao.setAllowedOrigins(origensPermitidas);
+        configuracao.setAllowedOriginPatterns(origensPermitidas);
         configuracao.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuracao.setAllowedHeaders(List.of("*"));
         configuracao.setAllowCredentials(true);
@@ -91,38 +100,39 @@ public class SecurityConfig {
                         .requestMatchers("/docs/**", "/api-docs/**", "/swagger-ui/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes").hasRole("ALUNO")
-                        .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/usuarios").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/usuarios").hasAnyRole("ADMIN", "PROFESSOR")
-                        .requestMatchers(HttpMethod.PUT, "/usuarios/*").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.POST, "/usuarios").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/usuarios/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/usuarios/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/usuarios/me").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/periodos").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/periodos").authenticated()
 
-                        .requestMatchers(HttpMethod.POST, "/palestrantes").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.POST, "/palestrantes").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/palestrantes").authenticated()
 
-                        .requestMatchers(HttpMethod.POST, "/eventos").hasAnyRole("ADMIN", "PROFESSOR")
-                        .requestMatchers(HttpMethod.PUT, "/eventos/*").hasAnyRole("ADMIN", "PROFESSOR")
-                        .requestMatchers(HttpMethod.DELETE, "/eventos/*").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers(HttpMethod.POST, "/eventos").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/eventos/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/eventos/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/eventos", "/eventos/*").authenticated()
 
                         .requestMatchers("/me/inscricoes").hasRole("ALUNO")
                         .requestMatchers("/me/pontuacao").hasRole("ALUNO")
-                        .requestMatchers("/pontuacao/aluno/*/periodo/*").hasAnyRole("ADMIN", "PROFESSOR")
+                        .requestMatchers("/pontuacao/aluno/*/periodo/*").hasRole("ADMIN")
 
                         .requestMatchers("/inscricoes/*/certificado").hasRole("ALUNO")
                         .requestMatchers(HttpMethod.DELETE, "/inscricoes/*").hasRole("ALUNO")
                         .requestMatchers(HttpMethod.GET, "/inscricoes/*").authenticated()
 
                         // Check-in por sessao (QR gerado pelo evento, nao mais por aluno):
-                        // admin/professor geram o QR de entrada/saida, o proprio aluno
-                        // escaneia e confirma - ver CheckinSessaoController.
-                        .requestMatchers(HttpMethod.POST, "/eventos/*/checkin-sessoes").hasAnyRole("ADMIN", "PROFESSOR")
-                        .requestMatchers(HttpMethod.GET, "/checkin-sessoes/*/qrcode").hasAnyRole("ADMIN", "PROFESSOR")
+                        // o admin gera o QR de entrada/saida, o proprio aluno escaneia e
+                        // confirma - ver CheckinSessaoController.
+                        .requestMatchers(HttpMethod.GET, "/eventos/*/checkins").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/eventos/*/checkin-sessoes").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/checkin-sessoes/*/qrcode").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/checkin-sessoes/*/confirmar").hasRole("ALUNO")
 
                         .anyRequest().authenticated())

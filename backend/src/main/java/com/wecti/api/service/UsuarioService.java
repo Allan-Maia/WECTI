@@ -75,7 +75,7 @@ public class UsuarioService {
                 .email(request.email())
                 .perfil(request.perfil())
                 .rgm(request.perfil() == Perfil.ALUNO ? request.rgm() : null)
-                .cpf(request.perfil() == Perfil.PROFESSOR ? request.cpf() : null)
+                .cpf(request.perfil() == Perfil.ADMIN ? request.cpf() : null)
                 .curso(request.perfil() == Perfil.ALUNO ? request.curso() : null)
                 .senha(passwordEncoder.encode(senhaProvisoria))
                 .build();
@@ -95,7 +95,7 @@ public class UsuarioService {
         usuario.setEmail(request.email());
         usuario.setPerfil(request.perfil());
         usuario.setRgm(request.perfil() == Perfil.ALUNO ? request.rgm() : null);
-        usuario.setCpf(request.perfil() == Perfil.PROFESSOR ? request.cpf() : null);
+        usuario.setCpf(request.perfil() == Perfil.ADMIN ? request.cpf() : null);
         usuario.setCurso(request.perfil() == Perfil.ALUNO ? request.curso() : null);
 
         return usuarioRepository.save(usuario);
@@ -125,21 +125,18 @@ public class UsuarioService {
 
     /**
      * "Esqueci minha senha" - identidade confirmada com email + RGM (aluno)
-     * ou CPF (professor), sem link por email (ver RedefinirSenhaRequest).
-     * Tambem serve pro Professor (sempre cadastrado pelo Admin com senha
+     * ou CPF (admin), sem link por email (ver RedefinirSenhaRequest).
+     * Tambem serve pro Admin (sempre cadastrado por outro Admin com senha
      * provisoria que ninguem sabe) definir a primeira senha de verdade.
-     * Admin nao tem RGM/CPF, entao esse fluxo nao cobre reset de Admin de
-     * proposito - a mensagem generica ("dados nao conferem") evita expor
-     * se o email existe ou qual o motivo exato de nao bater.
+     * A mensagem generica ("dados nao conferem") evita expor se o email
+     * existe ou qual o motivo exato de nao bater.
      */
     public Usuario redefinirSenha(RedefinirSenhaRequest request) {
         Usuario usuario = usuarioRepository.findByEmail(request.email())
                 .orElseThrow(() -> new CredenciaisInvalidasException(
                         "Dados nao conferem - verifique o email e o RGM/CPF informados"));
 
-        String identificadorEsperado = usuario.getPerfil() == Perfil.ALUNO ? usuario.getRgm()
-                : usuario.getPerfil() == Perfil.PROFESSOR ? usuario.getCpf()
-                : null;
+        String identificadorEsperado = usuario.getPerfil() == Perfil.ALUNO ? usuario.getRgm() : usuario.getCpf();
 
         if (identificadorEsperado == null || !identificadorEsperado.equals(request.identificador())) {
             throw new CredenciaisInvalidasException(
@@ -162,8 +159,13 @@ public class UsuarioService {
         if (request.perfil() == Perfil.ALUNO && (request.rgm() == null || request.rgm().isBlank())) {
             throw new CampoInvalidoException("rgm", "RGM e obrigatorio para usuarios com perfil ALUNO");
         }
-        if (request.perfil() == Perfil.PROFESSOR && (request.cpf() == null || request.cpf().isBlank())) {
-            throw new CampoInvalidoException("cpf", "CPF e obrigatorio para usuarios com perfil PROFESSOR");
+        // CPF e obrigatorio pro Admin - e o identificador usado no
+        // "esqueci minha senha" (ver redefinirSenha); sem ele, um Admin
+        // cadastrado por outro Admin nunca teria como definir a propria
+        // senha, ja que a senha provisoria gerada no cadastro nunca e
+        // revelada pra ninguem.
+        if (request.perfil() == Perfil.ADMIN && (request.cpf() == null || request.cpf().isBlank())) {
+            throw new CampoInvalidoException("cpf", "CPF e obrigatorio para usuarios com perfil ADMIN");
         }
     }
 

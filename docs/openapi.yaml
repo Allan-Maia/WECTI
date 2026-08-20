@@ -9,8 +9,9 @@
 #   - Pontos do evento sao definidos no proprio cadastro do evento.
 #   - Pontuacao e acumulada dentro do periodo (semestre) e reinicia a cada
 #     novo periodo cadastrado.
-#   - Perfis: admin, professor, aluno (sem perfil "operador" separado).
-#   - Nao ha app Android dedicado: admin/professor gera o QR code de
+#   - Perfis: admin, aluno (sem perfil "operador" nem "professor" -
+#     confirmado com o stakeholder do projeto).
+#   - Nao ha app Android dedicado: o admin gera o QR code de
 #     check-in/check-out pelo proprio site e o aluno confirma a propria
 #     presenca escaneando com a camera do celular (Android ou iOS).
 #   - Pontos do evento so contam para o aluno quando os criterios do
@@ -27,7 +28,7 @@ info:
   title: WECTI API
   description: >
     API central do sistema de controle de acesso a palestras e eventos.
-    O site (aluno e admin/professor) consome exclusivamente esta API -
+    O site (aluno e admin) consome exclusivamente esta API -
     nenhum cliente acessa o banco direto. Nao ha app Android dedicado: o
     check-in/check-out é feito via QR code lido pela câmera nativa do
     celular do aluno. Este e um RASCUNHO inicial para alinhar o time
@@ -43,7 +44,7 @@ servers:
 
 tags:
   - name: Auth
-    description: Login dos três perfis (admin, professor, aluno)
+    description: Login dos perfis ativos (admin, aluno)
   - name: Usuarios
   - name: Periodos
     description: Semestres - controlam a janela de acumulo de pontuação
@@ -52,7 +53,7 @@ tags:
   - name: Inscricoes
   - name: Checkins
     description: >
-      Admin/professor gera um QR code por sessão (entrada e depois
+      Admin gera um QR code por sessão (entrada e depois
       saída) e projeta na tela; o próprio aluno confirma a presença
       escaneando com a câmera do celular (Android ou iOS, sem app)
   - name: Certificados
@@ -69,7 +70,7 @@ paths:
   /auth/login:
     post:
       tags: [Auth]
-      summary: Autentica um usuário (aluno, professor ou admin)
+      summary: Autentica um usuário (aluno ou admin)
       security: []
       requestBody:
         required: true
@@ -107,9 +108,9 @@ paths:
       description: >
         Sempre cria um usuário com perfil ALUNO - não existe campo
         "perfil" no corpo da requisição, então não tem como quem se
-        autocadastra virar Professor ou Admin por essa via. Cadastro de
-        Professor continua sendo feito só pelo Admin, em POST /usuarios.
-        Já devolve token (igual ao login), pra entrar direto no sistema.
+        autocadastra virar Admin por essa via. Cadastro de Admin continua
+        sendo feito só por outro Admin, em POST /usuarios. Já devolve
+        token (igual ao login), pra entrar direto no sistema.
       security: []
       requestBody:
         required: true
@@ -159,11 +160,10 @@ paths:
         Sem token/link por email de propósito - não há servidor de email
         configurado no projeto, e o cliente confirmou que não precisa de
         autenticação extra. A identidade é confirmada com o RGM (se
-        perfil = aluno) ou CPF (se perfil = professor) já cadastrados -
+        perfil = aluno) ou CPF (se perfil = admin) já cadastrados -
         batendo, a pessoa já define a senha nova na mesma chamada. Serve
-        também pro Professor (sempre cadastrado pelo Admin com uma senha
+        também pro Admin (sempre cadastrado por outro Admin com uma senha
         provisória que ninguém sabe) definir a primeira senha de verdade.
-        Não cobre reset de conta Admin (sem RGM/CPF) - por design.
         Já devolve token (igual ao login), pra entrar direto no sistema.
       security: []
       requestBody:
@@ -179,7 +179,7 @@ paths:
                   format: email
                 identificador:
                   type: string
-                  description: RGM (8 dígitos, aluno) ou CPF (11 dígitos, professor)
+                  description: RGM (8 dígitos, aluno) ou CPF (11 dígitos, admin)
                 nova_senha:
                   type: string
                   format: password
@@ -257,7 +257,7 @@ paths:
       tags: [Usuarios]
       summary: Cadastra aluno ou convidado avulso
       description: >
-        Usado pelo admin/professor direto pelo site quando precisa
+        Usado pelo admin direto pelo site quando precisa
         cadastrar alguém na hora, na porta do evento.
       requestBody:
         required: true
@@ -283,7 +283,7 @@ paths:
           format: uuid
     put:
       tags: [Usuarios]
-      summary: Atualiza um usuário (admin ou professor)
+      summary: Atualiza um usuário (admin)
       requestBody:
         required: true
         content:
@@ -371,7 +371,7 @@ paths:
                   $ref: '#/components/schemas/Palestrante'
     post:
       tags: [Palestrantes]
-      summary: Cadastra um novo palestrante (admin ou professor)
+      summary: Cadastra um novo palestrante (admin)
       requestBody:
         required: true
         content:
@@ -416,7 +416,7 @@ paths:
                   $ref: '#/components/schemas/Evento'
     post:
       tags: [Eventos]
-      summary: Cadastra um evento (admin ou professor)
+      summary: Cadastra um evento (admin)
       description: >
         A pontuação do evento é definida aqui, no cadastro (campo "pontos"),
         conforme decidido pelo time.
@@ -454,7 +454,7 @@ paths:
                 $ref: '#/components/schemas/Evento'
     put:
       tags: [Eventos]
-      summary: Atualiza um evento (admin ou professor)
+      summary: Atualiza um evento (admin)
       requestBody:
         required: true
         content:
@@ -470,7 +470,7 @@ paths:
                 $ref: '#/components/schemas/Evento'
     delete:
       tags: [Eventos]
-      summary: Cancela um evento (admin ou professor)
+      summary: Cancela um evento (admin)
       responses:
         '204':
           description: Evento cancelado
@@ -500,7 +500,7 @@ paths:
           description: Aluno já inscrito ou evento sem vagas
     get:
       tags: [Inscricoes]
-      summary: Lista inscritos no evento (admin ou professor)
+      summary: Lista inscritos no evento (admin)
       responses:
         '200':
           description: Lista de inscrições
@@ -568,11 +568,61 @@ paths:
   # ---------------------------------------------------------------------
   # O QR code individual do aluno (gerado na inscricao, enviado por
   # e-mail) foi removido - nao ha mais app Android dedicado. Agora quem
-  # gera o QR e o admin/professor, um por evento (tipo ENTRADA e depois
+  # gera o QR e o admin, um por evento (tipo ENTRADA e depois
   # tipo SAIDA), projetado na tela pro publico. O aluno le com a camera
   # do proprio celular (Android ou iOS, sem precisar de app nenhum) - a
   # camera abre a URL embutida no QR direto no navegador, que chama
   # POST /checkin-sessoes/{sessaoId}/confirmar autenticado como aluno.
+  /eventos/{eventoId}/checkins:
+    parameters:
+      - name: eventoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Checkins]
+      summary: Relatório de presença do evento (admin)
+      description: >
+        Lista quem já fez check-in nesse evento (com ou sem check-out
+        ainda), com nome/RGM do aluno - usado na seção "Participantes do
+        Evento" da tela de check-in.
+      responses:
+        '200':
+          description: Lista de check-ins do evento
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    inscricao_id:
+                      type: string
+                      format: uuid
+                    aluno_id:
+                      type: string
+                      format: uuid
+                    aluno_nome:
+                      type: string
+                    aluno_rgm:
+                      type: string
+                      nullable: true
+                    entrada:
+                      type: string
+                      format: date-time
+                    saida:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    percentual_presenca:
+                      type: number
+                      format: float
+                      nullable: true
+        '404':
+          description: Evento não encontrado
+
   /eventos/{eventoId}/checkin-sessoes:
     parameters:
       - name: eventoId
@@ -583,7 +633,7 @@ paths:
           format: uuid
     post:
       tags: [Checkins]
-      summary: Gera uma sessão de check-in/check-out pro evento (admin ou professor)
+      summary: Gera uma sessão de check-in/check-out pro evento (admin)
       requestBody:
         required: true
         content:
@@ -608,7 +658,7 @@ paths:
           format: uuid
     get:
       tags: [Checkins]
-      summary: Imagem do QR code da sessão, pra projetar na tela (admin ou professor)
+      summary: Imagem do QR code da sessão, pra projetar na tela (admin)
       description: >
         O QR codifica a URL de confirmação
         (`<frontend>/checkin/confirmar/{sessaoId}`) - a camera do celular
@@ -717,9 +767,9 @@ paths:
           format: uuid
     get:
       tags: [Pontuacao]
-      summary: Pontuação de um aluno especifico em um período (somente admin ou professor)
+      summary: Pontuação de um aluno especifico em um período (somente admin)
       description: >
-        Adicionado para o painel de admin/professor consultar a
+        Adicionado para o painel de admin consultar a
         pontuação de qualquer aluno, sem depender do token do proprio
         aluno usado em /me/pontuacao.
       responses:
@@ -744,7 +794,7 @@ components:
       # enum Java por padrao (Usuario.perfil, NovoUsuario.perfil e a claim
       # "perfil" do JWT) - o rascunho original documentava em minusculas,
       # mas nao era isso que a API implementada realmente devolvia/esperava.
-      enum: [ADMIN, PROFESSOR, ALUNO]
+      enum: [ADMIN, ALUNO]
 
     Usuario:
       type: object
@@ -766,24 +816,25 @@ components:
           description: >
             Registro Geral do Aluno (RGM) - identificador acadêmico da
             faculdade, com 8 dígitos. Obrigatório e único quando
-            perfil = aluno; não se aplica a admin/professor.
+            perfil = aluno; não se aplica a admin.
         cpf:
           type: string
           pattern: '^\d{11}$'
           nullable: true
           description: >
-            CPF do professor, 11 dígitos. Obrigatório e único quando
-            perfil = professor; não se aplica a admin/aluno.
+            CPF do admin, 11 dígitos. Obrigatório e único quando
+            perfil = admin (é o identificador usado no "esqueci minha
+            senha" desse perfil); não se aplica a aluno.
         curso:
           type: string
           nullable: true
           description: >
             Curso do aluno (ex.: "Ciência da Computação") - confirmado
-            com o professor que é só informativo, pra saber quais cursos
-            estão participando das palestras. Não afeta pontuação,
-            elegibilidade pra inscrição nem nenhuma outra regra de
-            negócio - por isso texto livre, opcional, sem unicidade.
-            Não se aplica a admin/professor.
+            com o professor (stakeholder do projeto) que é só
+            informativo, pra saber quais cursos estão participando das
+            palestras. Não afeta pontuação, elegibilidade pra inscrição
+            nem nenhuma outra regra de negócio - por isso texto livre,
+            opcional, sem unicidade. Não se aplica a admin.
 
     NovoUsuario:
       type: object
@@ -809,7 +860,7 @@ components:
           pattern: '^\d{11}$'
           nullable: true
           description: >
-            Obrigatório quando perfil = professor, pela mesma razão do rgm
+            Obrigatório quando perfil = admin, pela mesma razão do rgm
             acima - validado no backend.
         curso:
           type: string

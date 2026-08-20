@@ -12,7 +12,6 @@ import type { NovoUsuario, Perfil, Usuario } from '../../types';
 
 const LABEL_PERFIL: Record<string, string> = {
   ADMIN: 'Administrador',
-  PROFESSOR: 'Professor',
   ALUNO: 'Aluno',
 };
 
@@ -113,7 +112,7 @@ export default function AdminUsuariosPage() {
   return (
     <PageContainer
       titulo="Usuários"
-      descricao="Alunos, professores e administradores cadastrados"
+      descricao="Alunos e administradores cadastrados"
       acao={<Button onClick={abrirNovo}>Novo usuário</Button>}
     >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -131,7 +130,6 @@ export default function AdminUsuariosPage() {
         >
           <option value="">Todos os perfis</option>
           <option value="ALUNO">Aluno</option>
-          <option value="PROFESSOR">Professor</option>
           <option value="ADMIN">Administrador</option>
         </select>
       </div>

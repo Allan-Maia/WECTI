@@ -17,6 +17,7 @@ import CheckinConfirmarPage from './pages/aluno/CheckinConfirmarPage';
 import AdminEventosPage from './pages/admin/AdminEventosPage';
 import AdminUsuariosPage from './pages/admin/AdminUsuariosPage';
 import AdminCheckinPage from './pages/admin/AdminCheckinPage';
+import { homeDoPerfil } from './utils/rotas';
 import type { Perfil } from './types';
 
 function RotaPrivada({ perfis, children }: { perfis?: Perfil[]; children: ReactNode }) {
@@ -31,7 +32,7 @@ function RotaPrivada({ perfis, children }: { perfis?: Perfil[]; children: ReactN
 function RotaInicial() {
   const { autenticado, perfil } = useAuth();
   if (!autenticado) return <Navigate to="/login" replace />;
-  return <Navigate to={perfil === 'ALUNO' ? '/eventos' : '/admin/eventos'} replace />;
+  return <Navigate to={homeDoPerfil(perfil)} replace />;
 }
 
 function AppRoutes() {
@@ -100,11 +101,11 @@ function AppRoutes() {
         }
       />
 
-      {/* Admin / Professor */}
+      {/* Admin */}
       <Route
         path="/admin/eventos"
         element={
-          <RotaPrivada perfis={['ADMIN', 'PROFESSOR']}>
+          <RotaPrivada perfis={['ADMIN']}>
             <AdminEventosPage />
           </RotaPrivada>
         }
@@ -112,7 +113,7 @@ function AppRoutes() {
       <Route
         path="/admin/usuarios"
         element={
-          <RotaPrivada perfis={['ADMIN', 'PROFESSOR']}>
+          <RotaPrivada perfis={['ADMIN']}>
             <AdminUsuariosPage />
           </RotaPrivada>
         }
@@ -120,7 +121,7 @@ function AppRoutes() {
       <Route
         path="/admin/checkin"
         element={
-          <RotaPrivada perfis={['ADMIN', 'PROFESSOR']}>
+          <RotaPrivada perfis={['ADMIN']}>
             <AdminCheckinPage />
           </RotaPrivada>
         }

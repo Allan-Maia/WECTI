@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import PageContainer from '../../components/PageContainer';
 import Button from '../../components/Button';
 import { LoadingBlock } from '../../components/LoadingSpinner';
+import EmptyState from '../../components/EmptyState';
 import { useEventos } from '../../hooks/useEventos';
-import { criarSessaoCheckin, baixarQrCodeSessao } from '../../services/checkins';
+import { criarSessaoCheckin, baixarQrCodeSessao, listarCheckinsDoEvento } from '../../services/checkins';
 import { extrairMensagemErro } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import type { SessaoCheckin, TipoSessaoCheckin } from '../../types';
+import { formatarDataHora } from '../../utils/data';
+import type { EventoCheckin, SessaoCheckin, TipoSessaoCheckin } from '../../types';
 
 /**
  * Admin/professor escolhe o evento e o tipo de sessão (entrada ou saída)
@@ -26,11 +28,37 @@ export default function AdminCheckinPage() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
 
+  const [participantes, setParticipantes] = useState<EventoCheckin[]>([]);
+  const [carregandoParticipantes, setCarregandoParticipantes] = useState(false);
+
   useEffect(() => {
     return () => {
       if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
     };
   }, [qrCodeUrl]);
+
+  // Lista de presença - recarrega sempre que o evento selecionado muda
+  // (e também depois de gerar um QR, via recarregarParticipantes abaixo,
+  // já que confirmações podem já ter acontecido enquanto essa tela ficava
+  // aberta com o QR anterior).
+  useEffect(() => {
+    if (!eventoId) {
+      setParticipantes([]);
+      return;
+    }
+    setCarregandoParticipantes(true);
+    listarCheckinsDoEvento(eventoId)
+      .then(setParticipantes)
+      .catch(() => setParticipantes([]))
+      .finally(() => setCarregandoParticipantes(false));
+  }, [eventoId]);
+
+  const recarregarParticipantes = () => {
+    if (!eventoId) return;
+    listarCheckinsDoEvento(eventoId)
+      .then(setParticipantes)
+      .catch(() => {});
+  };
 
   /** Esconde o QR gerado anteriormente assim que o evento ou o tipo
    *  mudam - sem isso, o QR (e o link embutido nele) continuavam sendo
@@ -131,6 +159,53 @@ export default function AdminCheckinPage() {
           </div>
         )}
       </div>
+
+      {eventoId && (
+        <div className="mt-6 flex flex-col gap-4 rounded-card border border-border bg-surface p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-text">Participantes do Evento</h2>
+              <p className="text-sm text-text-muted">
+                {carregandoParticipantes ? 'Carregando...' : `${participantes.length} participante${participantes.length === 1 ? '' : 's'} presente${participantes.length === 1 ? '' : 's'}.`}
+              </p>
+            </div>
+            <Button variante="outline" onClick={recarregarParticipantes} disabled={carregandoParticipantes}>
+              Atualizar
+            </Button>
+          </div>
+
+          {carregandoParticipantes && <LoadingBlock mensagem="Carregando participantes..." />}
+
+          {!carregandoParticipantes && participantes.length === 0 && (
+            <EmptyState titulo="Nenhum check-in ainda" descricao="Assim que um aluno confirmar a entrada, ele aparece aqui." />
+          )}
+
+          {!carregandoParticipantes && participantes.length > 0 && (
+            <div className="overflow-x-auto rounded-card border border-border">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-text-muted">
+                    <th className="px-5 py-3 font-medium">Aluno</th>
+                    <th className="px-5 py-3 font-medium">RGM</th>
+                    <th className="px-5 py-3 font-medium">Entrada</th>
+                    <th className="px-5 py-3 font-medium">Saída</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {participantes.map((p) => (
+                    <tr key={p.inscricao_id} className="border-b border-border last:border-0">
+                      <td className="px-5 py-3 text-text">{p.aluno_nome}</td>
+                      <td className="px-5 py-3 text-text-muted">{p.aluno_rgm ?? '-'}</td>
+                      <td className="px-5 py-3 text-text-muted">{formatarDataHora(p.entrada)}</td>
+                      <td className="px-5 py-3 text-text-muted">{p.saida ? formatarDataHora(p.saida) : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </PageContainer>
   );
 }
