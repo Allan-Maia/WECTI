@@ -1,2 +1,11 @@
 .claude/
 .idea/
+
+# Arquivos de ambiente com valores REAIS (senha do banco, JWT_SECRET).
+# docs/producao.env.exemplo e versionado de proposito - e so o modelo,
+# com os campos sensiveis em branco. Qualquer copia preenchida fica de
+# fora: segredo de producao nunca entra no repositorio.
+.env
+*.env
+!*.env.exemplo
+!*.env.example
