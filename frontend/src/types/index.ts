@@ -174,6 +174,18 @@ export interface RedefinirSenhaRequest {
   nova_senha: string;
 }
 
+/** Resposta da pagina publica de validacao de certificado
+ *  (GET /validar/{codigo}). Sem RGM de proposito - ver
+ *  CertificadoValidacaoResponse no backend. */
+export interface CertificadoValidacao {
+  codigo: string;
+  aluno_nome: string;
+  evento_titulo: string;
+  data_realizacao: string;
+  carga_horaria: string;
+  emitido_em: string;
+}
+
 // Envelope de paginacao (ver PaginaResponse no backend) - usado nas
 // listagens que crescem muito, ex.: GET /usuarios.
 export interface Pagina<T> {

@@ -116,6 +116,30 @@
             <artifactId>pdfbox</artifactId>
             <version>3.0.3</version>
         </dependency>
+        <!--
+            Renderizacao do certificado a partir do HTML/CSS aprovado, em vez
+            de desenhar tudo na mao com a API do PDFBox: e o que permite o PDF
+            sair identico ao modelo (mesmas fontes, mesmo SVG do logo, mesmas
+            medidas), em vez de uma aproximacao.
+
+            Usamos o artefato "io.github.openhtmltopdf" (fork mantido), nao o
+            "com.openhtmltopdf" original: so este tem build para PDFBox 3, que
+            e a versao ja usada no projeto - o original ainda depende de
+            PDFBox 2 e conflitaria.
+
+            svg-support (Batik) e o que desenha os SVGs inline do layout
+            (faixa diagonal do topo, asteriscos e o logo da UNICID).
+        -->
+        <dependency>
+            <groupId>io.github.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-pdfbox</artifactId>
+            <version>1.1.82</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-svg-support</artifactId>
+            <version>1.1.82</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

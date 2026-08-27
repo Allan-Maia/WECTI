@@ -718,6 +718,14 @@ paths:
       description: >
         Só libera o PDF se a inscrição tiver check-in, check-out e
         permanência de pelo menos 75% da duração do evento.
+
+        O PDF traz nome do aluno, RGM, carga horária (calculada da
+        duração do evento), data de realização e o título do evento,
+        mais o bloco de validação: QR code apontando para
+        `{origem}/validar/{codigo}` e o código impresso para quem
+        preferir digitar. O código é gerado uma única vez por
+        certificado e reaproveitado nos downloads seguintes - senão um
+        código já impresso deixaria de validar.
       responses:
         '200':
           description: Certificado em PDF
@@ -728,6 +736,60 @@ paths:
                 format: binary
         '422':
           description: Critérios de presença ainda não cumpridos
+
+  /validar/{codigo}:
+    parameters:
+      - name: codigo
+        in: path
+        required: true
+        description: Código impresso no certificado (ex.\: WCT-2026-A7F3K2)
+        schema:
+          type: string
+    get:
+      tags: [Certificados]
+      summary: Valida um certificado pelo código (público, sem login)
+      description: >
+        Endpoint PÚBLICO de propósito: quem confere um certificado
+        costuma ser um recrutador ou outra instituição, que não tem
+        conta no sistema - exigir login inviabilizaria a própria
+        funcionalidade. A proteção não é o login: o código é aleatório
+        (SecureRandom, ~887 milhões de combinações, não sequencial),
+        então não dá para adivinhar códigos válidos e varrer os alunos
+        certificados.
+
+        Não devolve RGM: como o endpoint é aberto, tudo aqui é público
+        para quem tiver o código. Nome, evento, data e carga horária já
+        bastam para conferir autenticidade; o RGM aparece só no PDF, que
+        o próprio aluno decide para quem enviar.
+
+        O código é aceito com variações triviais de digitação
+        (minúsculas, espaços sobrando, sem os hífens).
+      security: []
+      responses:
+        '200':
+          description: Certificado encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  codigo:
+                    type: string
+                  aluno_nome:
+                    type: string
+                  evento_titulo:
+                    type: string
+                  data_realizacao:
+                    type: string
+                    format: date
+                  carga_horaria:
+                    type: string
+                    description: Ex.\: "2h" ou "2h30"
+                  emitido_em:
+                    type: string
+                    format: date-time
+        '404':
+          description: Nenhum certificado encontrado para o código informado
 
   # ---------------------------------------------------------------------
   # Pontuacao

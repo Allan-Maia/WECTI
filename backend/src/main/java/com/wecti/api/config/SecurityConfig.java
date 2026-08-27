@@ -98,6 +98,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/health", "/auth/login", "/auth/registrar", "/auth/redefinir-senha").permitAll()
                         .requestMatchers("/docs/**", "/api-docs/**", "/swagger-ui/**").permitAll()
+                        // Validacao de certificado e publica de proposito: quem confere
+                        // costuma ser recrutador/outra instituicao, sem conta aqui - ver
+                        // CertificadoController.validar.
+                        .requestMatchers(HttpMethod.GET, "/validar/*").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/eventos/*/inscricoes").hasRole("ALUNO")
                         .requestMatchers(HttpMethod.GET, "/eventos/*/inscricoes").hasRole("ADMIN")

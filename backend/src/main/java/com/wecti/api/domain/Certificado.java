@@ -33,6 +33,15 @@ public class Certificado {
     @JoinColumn(name = "inscricao_id", nullable = false, unique = true)
     private Inscricao inscricao;
 
+    /**
+     * Codigo publico de validacao (ex.: "WCT-2026-A7F3K2") - impresso no
+     * PDF e resolvido por GET /validar/{codigo}. Gerado pelo
+     * CodigoCertificadoGenerator; ver V4__codigo_validacao_certificado.sql
+     * sobre a coluna ser nullable no banco.
+     */
+    @Column(length = 20, unique = true)
+    private String codigo;
+
     @Column(name = "emitido_em", nullable = false)
     private LocalDateTime emitidoEm;
 

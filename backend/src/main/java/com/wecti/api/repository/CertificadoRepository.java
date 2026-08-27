@@ -8,4 +8,9 @@ import java.util.UUID;
 
 public interface CertificadoRepository extends JpaRepository<Certificado, UUID> {
     Optional<Certificado> findByInscricaoId(UUID inscricaoId);
+
+    /** Usado pela pagina publica de validacao (GET /validar/{codigo}). */
+    Optional<Certificado> findByCodigo(String codigo);
+
+    boolean existsByCodigo(String codigo);
 }

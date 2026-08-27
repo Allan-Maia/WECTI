@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegistrarPage from './pages/RegistrarPage';
 import RecuperarSenhaPage from './pages/RecuperarSenhaPage';
+import ValidarCertificadoPage from './pages/ValidarCertificadoPage';
 import EventosPage from './pages/aluno/EventosPage';
 import MinhasInscricoesPage from './pages/aluno/MinhasInscricoesPage';
 import HistoricoPage from './pages/aluno/HistoricoPage';
@@ -41,6 +42,10 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<RegistrarPage />} />
       <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
+      {/* Validacao de certificado - publica, sem login (destino do QR
+       *  code impresso no certificado). */}
+      <Route path="/validar" element={<ValidarCertificadoPage />} />
+      <Route path="/validar/:codigo" element={<ValidarCertificadoPage />} />
       <Route path="/" element={<RotaInicial />} />
 
       {/* Aluno */}
