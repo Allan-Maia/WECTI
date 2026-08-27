@@ -6,7 +6,12 @@
 # spring.datasource.* que a hospedagem sobrescreve.
 app:
   datasource:
-    url: jdbc:mysql://localhost:3306/jadir9152_wecti?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
+    # Nome do banco vem de DB_NAME: no cPanel o banco recebe o prefixo da
+    # conta, e esse nome muda se a conta ou o banco mudarem. Deixar fixo
+    # aqui obrigaria a recompilar o .jar so pra corrigir um nome.
+    # DB_HOST/DB_PORT tambem sao variaveis pelo mesmo motivo, embora quase
+    # sempre fiquem em localhost:3306 na hospedagem compartilhada.
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:jadir9152_wecti}?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
     # Sem valor padrao de proposito: usuario/senha de producao nunca ficam
     # no codigo-fonte. Configure DB_USER/DB_PASSWORD como variavel de
     # ambiente real no painel da hospedagem (ou no application.yml externo

@@ -65,11 +65,77 @@ Isso é necessário para duas coisas funcionarem corretamente atrás do
 proxy: o IP real do visitante (usado no limite de tentativas de login) e
 qualquer URL que a aplicação gere.
 
+### E se o certificado ainda não saiu?
+
+Dá para adiantar o deploy em HTTP e migrar depois — mas os endereços
+precisam ser **coerentes entre si** nas duas fases. O navegador compara a
+origem exata: `http://dominio` e `https://dominio` são origens
+**diferentes**, e misturar as duas faz o CORS bloquear todas as chamadas
+do site (o sintoma é o login falhar com "Não foi possível entrar" mesmo
+com a senha certa).
+
+**Fase 1 — enquanto está só em HTTP**
+
+| Onde | Valor |
+|---|---|
+| `CORS_ALLOWED_ORIGINS` | `http://jadir9152.c44.integrator.host` |
+| `FRONTEND_URL` | `http://jadir9152.c44.integrator.host` |
+| `frontend/.env.production` | `VITE_API_URL=http://jadir9152.c44.integrator.host` |
+
+E **não ligue** o *Integrator Force HTTPS* ainda.
+
+**Fase 2 — quando o certificado estiver válido**
+
+1. Trocar os três valores acima para `https://`.
+2. Refazer o build do frontend (`npm run build`) e subir de novo — o
+   endereço da API fica **gravado dentro** dos arquivos no build, então
+   trocar só a variável não adianta.
+3. Reiniciar a API para as variáveis novas valerem.
+4. **Agora sim** ligar o *Integrator Force HTTPS*.
+
+Se preferir evitar esse retrabalho, espere o certificado e faça tudo
+direto em `https://`.
+
 ---
 
 ## 2. Banco de dados no cPanel
 
-Antes de subir a API, o banco precisa existir.
+### Se o banco JÁ existe (versão anterior do sistema)
+
+O Flyway aplica sozinho as migrations que faltam — mas **faça backup
+antes**, porque uma delas apaga uma coluna.
+
+1. **Backup primeiro.** cPanel → **Backup** → *Download a MySQL Database
+   Backup* → escolher o banco. Guarde o arquivo.
+2. cPanel → **phpMyAdmin** → selecionar o banco → aba **SQL** → colar o
+   conteúdo de `docs/verificar-banco.sql` e executar. Ele mostra em que
+   versão o schema está e se alguma migration falhou.
+3. Comparar com o que o sistema espera hoje: **versão 4**.
+
+| Última versão no banco | O que o Flyway vai aplicar sozinho |
+|---|---|
+| 1 | V2, V3 e V4 |
+| 2 | V3 e V4 |
+| 3 | Só a V4 |
+| 4 | Nada — já está atualizado |
+
+O que cada uma faz:
+
+- **V2** — adiciona `cpf` em usuários, cria a tabela `sessoes_checkin` e
+  **apaga a coluna `inscricoes.qrcode_token`**. Essa é a parte destrutiva:
+  a coluna era do modelo antigo de QR por aluno, que não existe mais. Não
+  é usada por nada hoje, mas é o motivo do backup.
+- **V3** — adiciona `curso` em usuários.
+- **V4** — adiciona `codigo` em certificados e preenche os já existentes.
+
+> Se a consulta 2 do arquivo retornar alguma linha (`success = 0`), **não
+> suba a aplicação**: há uma migration que falhou no meio e o banco está
+> inconsistente. Restaure o backup ou me chame antes de continuar.
+
+Se o banco tiver apenas dados de teste, vale limpar antes de abrir para os
+alunos — assim ninguém começa com inscrição ou pontuação de mentira.
+
+### Se o banco ainda NÃO existe
 
 1. cPanel → **MySQL® Databases**.
 2. Em *Create New Database*, criar o banco. O cPanel prefixa o nome com a
@@ -80,13 +146,12 @@ Antes de subir a API, o banco precisa existir.
 4. Em *Add User To Database*, associar o usuário ao banco e marcar
    **ALL PRIVILEGES**.
 
-Guarde os três valores — são o `DB_USER`, o `DB_PASSWORD` e o nome do
-banco. As tabelas **não** precisam ser criadas à mão: o Flyway cria tudo
-no primeiro start da API.
+Guarde os três valores — são o `DB_USER`, o `DB_PASSWORD` e o `DB_NAME`.
+As tabelas **não** precisam ser criadas à mão: o Flyway cria tudo no
+primeiro start da API.
 
-> Se o nome do banco for diferente de `jadir9152_wecti`, a URL de conexão
-> em `application.yml` precisa ser ajustada — ou sobrescrita junto das
-> outras variáveis.
+> O padrão de `DB_NAME` é `jadir9152_wecti`. Se o seu banco tiver outro
+> nome, defina a variável `DB_NAME` — não é preciso recompilar nada.
 
 ---
 
@@ -164,19 +229,63 @@ npm ci
 npm run build
 ```
 
-**Publicando no cPanel:**
+### Publicando no cPanel, passo a passo
 
-1. Compacte o conteúdo de `dist/` em um `.zip` — o **conteúdo**, não a
-   pasta: ao abrir o zip você deve ver `index.html` e `assets/` na raiz,
-   não uma pasta `dist` dentro.
-2. cPanel → **File Manager** → entrar em `public_html`.
-3. Se já houver um site antigo ali, apagar antes (ou mover para uma pasta
-   `backup-antigo/`).
-4. **Upload** do zip → botão direito sobre ele → **Extract**.
-5. Apagar o zip depois de extrair.
-6. No File Manager, clicar em **Settings** (canto superior direito) e
-   marcar **Show Hidden Files (dotfiles)** — é a única forma de ver se o
-   `.htaccess` subiu. Sem ele, os links de QR code dão 404.
+**No seu computador:**
+
+1. Confirme o conteúdo de `frontend/.env.production` (o endereço da API).
+2. Gere o build:
+   ```bash
+   cd frontend
+   npm ci
+   npm run build
+   ```
+3. Confira que o `.htaccess` foi junto:
+   ```bash
+   ls -a dist/
+   ```
+   Tem que aparecer `.htaccess`, `index.html` e `assets/`.
+4. Compacte o **conteúdo** de `dist/`, não a pasta. Ao abrir o zip você
+   deve ver `index.html` na raiz — se vir uma pasta `dist` dentro, o site
+   fica em `/dist/` e não funciona.
+   - No Windows: entre em `dist`, `Ctrl+A`, botão direito → *Enviar para →
+     Pasta compactada*.
+   - O Explorer do Windows **não** inclui arquivos que começam com ponto
+     por padrão. Se o `.htaccess` não entrar no zip, envie ele à parte
+     (passo 9).
+
+**No cPanel:**
+
+5. **Gerenciador de arquivos** → entrar em `public_html`.
+6. Clicar em **Settings** (canto superior direito) → marcar
+   **Show Hidden Files (dotfiles)** → *Save*. Faça isso **agora**, antes
+   de subir: sem essa opção você não enxerga o `.htaccess` e não tem como
+   conferir nada.
+7. Se já houver site antigo: selecionar tudo e **Compress** para
+   `backup-site-antigo.zip` (fica guardado), depois apagar os originais.
+8. **Upload** do zip → voltar para `public_html` → botão direito no zip →
+   **Extract** → apagar o zip depois.
+9. Conferir que `public_html` tem: `index.html`, `assets/` e **`.htaccess`**.
+   Se o `.htaccess` não estiver lá:
+   - **+ File** → nome `.htaccess` → **Create New File**
+   - botão direito nele → **Edit** → colar o conteúdo de
+     `frontend/public/.htaccess` → *Save Changes*
+
+### Conferindo
+
+Abra o site e teste **as duas coisas separadamente**:
+
+1. `http://jadir9152.c44.integrator.host` — deve carregar a tela de login.
+   Se aparecer página em branco, abra o console do navegador (F12): erro
+   404 em arquivo `.js` normalmente significa que a pasta `dist` foi
+   junto no zip.
+2. `http://jadir9152.c44.integrator.host/validar` — **este é o teste do
+   `.htaccess`**. Se carregar a tela de validação, está certo. Se der
+   **404 do servidor**, o `.htaccess` não está funcionando, e todos os
+   links de QR code vão falhar.
+
+O segundo teste é o que costuma ser esquecido, porque a home funciona sem
+o `.htaccess` — o problema só aparece quando alguém escaneia um QR.
 
 O `.htaccess` necessário **já está no projeto** (`frontend/public/.htaccess`)
 e é copiado para `dist/` automaticamente no build. Ele existe porque as
@@ -213,17 +322,86 @@ mvn clean package -DskipTests
 O arquivo gerado é `backend/target/wecti-api-0.1.0-SNAPSHOT.jar` (cerca de
 60 MB — contém tudo, inclusive as fontes do certificado).
 
-**Publicando no cPanel:** a Integrator Host usa um plugin próprio, o
-**Integrator Spring Boot**. Procure por ele no painel (costuma ficar em
-*Software*). Nele você:
+### Publicando pelo Integrator Spring Boot
 
-1. Faz o upload do `.jar`.
-2. Define a porta (o plugin costuma atribuir uma; ela vira a
-   `SERVER_PORT`).
-3. Define as variáveis de ambiente da seção 3 — **se o plugin não tiver
-   campo para isso**, use o arquivo `application.yml` externo, na pasta
-   `appservers/standalone`, com o mesmo conteúdo em formato YAML.
-4. Inicia a aplicação e **abre o log** para conferir se subiu.
+O plugin fica em cPanel → seção **Avançado** → **Integrator Spring Boot**.
+
+1. **Se já houver uma aplicação rodando ali, pare ela primeiro.** Duas
+   instâncias tentando a mesma porta fazem a nova falhar com *Port already
+   in use*.
+2. **Upload do `.jar`** (`wecti-api-0.1.0-SNAPSHOT.jar`, ~74 MB). Se o
+   upload cair no meio pelo navegador, envie por FTP e depois aponte o
+   caminho no plugin.
+3. **Anote a porta** que o plugin atribuir. Ela é interna — o visitante
+   nunca a digita; o servidor web repassa. Se houver campo de porta,
+   ela corresponde à variável `SERVER_PORT`.
+4. **Configurar as variáveis de ambiente** (seção 3). Duas formas:
+
+   **a) O plugin tem campo de variáveis** — preencha ali, uma por linha,
+   no formato `NOME=valor`.
+
+   **b) O plugin não tem campo** — crie um `application.yml` externo em
+   `appservers/standalone` (pelo Gerenciador de arquivos). O conteúdo é
+   YAML, não `NOME=valor`:
+
+   ```yaml
+   app:
+     datasource:
+       username: jadir9152_seuusuario
+       password: SUA_SENHA_DO_BANCO
+     cors:
+       allowed-origins: https://jadir9152.c44.integrator.host
+     frontend-url: https://jadir9152.c44.integrator.host
+   jwt:
+     secret: COLE_AQUI_O_VALOR_GERADO
+   springdoc:
+     api-docs:
+       enabled: false
+     swagger-ui:
+       enabled: false
+   ```
+
+   > Repare que aqui vão os **nomes das propriedades** (`app.datasource.
+   > username`), não os nomes das variáveis (`DB_USER`). Os dois caminhos
+   > levam ao mesmo lugar — variável de ambiente **ou** arquivo, não
+   > precisa dos dois.
+
+5. **Iniciar** a aplicação.
+6. **Abrir o log** — este passo não é opcional. Uma aplicação que "iniciou"
+   no painel pode ter morrido no boot; só o log conta a verdade.
+
+### Lendo o log
+
+Start bem-sucedido, na ordem:
+
+```
+Successfully validated N migrations       (ou "Migrating schema ... to version 4")
+Tomcat started on port XXXX
+Started WectiApiApplication in X.X seconds
+```
+
+Erros que já apareceram neste projeto:
+
+| No log | Causa | O que fazer |
+|---|---|---|
+| `PlaceholderResolutionException: ... app.datasource.username` | Falta `DB_USER`/`DB_PASSWORD` (ou o `application.yml` externo sumiu) | Conferir a seção 3. Se estiver tudo certo, é `.jar` antigo — refaça o `mvn clean package` |
+| `Access denied for user 'X'@'%'` (sem citar banco) | Senha errada, ou o usuário não existe | Conferir `DB_USER` / `DB_PASSWORD` |
+| `Access denied for user 'X'@'%' to database 'Y'` | O usuário existe, mas **não está associado** ao banco `Y` — ou `DB_NAME` está errado | Conferir se `DB_NAME` é o nome completo (com prefixo da conta) e refazer o *Add User To Database* com ALL PRIVILEGES |
+| `Unknown database` | O banco não existe com esse nome | Criar em MySQL® Databases, ou corrigir `DB_NAME` |
+| `Port already in use` | Instância anterior ainda rodando | Parar a antiga no plugin |
+| `Communications link failure` | Host/porta do MySQL diferentes | Conferir `DB_HOST` / `DB_PORT` |
+
+### Conferindo que a API respondeu
+
+Com a aplicação no ar, abra no navegador:
+
+```
+http://jadir9152.c44.integrator.host/health
+```
+
+Deve responder algo simples de status. Se der 404, o servidor web não está
+repassando as chamadas para a aplicação — nesse caso é configuração de
+proxy do plugin, e vale abrir chamado com a Integrator.
 
 No log de um start bem-sucedido você deve ver, em ordem:
 
