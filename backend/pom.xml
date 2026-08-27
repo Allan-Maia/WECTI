@@ -145,6 +145,15 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Banco em memoria, so para o teste que verifica se a aplicacao
+             sobe (WectiApiApplicationTests). Sem ele esse teste exigiria um
+             MySQL de verdade, e era por isso que ele falhava e o build
+             precisava de -DskipTests. Nao vai para o .jar (scope test). -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>

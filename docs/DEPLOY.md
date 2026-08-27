@@ -316,11 +316,16 @@ A regra do `CORS_ALLOWED_ORIGINS` é sempre a mesma: ele lista de onde o
 
 ```bash
 cd backend
-mvn clean package -DskipTests
+mvn clean package
 ```
 
 O arquivo gerado é `backend/target/wecti-api-0.1.0-SNAPSHOT.jar` (cerca de
-60 MB — contém tudo, inclusive as fontes do certificado).
+74 MB — contém tudo, inclusive as fontes do certificado).
+
+Repare que **não** usamos `-DskipTests`: os testes automatizados rodam
+como parte do build e não precisam de banco (usam H2 em memória). Se algum
+falhar, o `.jar` não é gerado — que é justamente o objetivo, para não
+publicar uma versão com regra de negócio quebrada.
 
 ### Publicando pelo Integrator Spring Boot
 

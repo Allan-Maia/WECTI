@@ -1,0 +1,37 @@
+# Perfil usado apenas por WectiApiApplicationTests, que verifica se a
+# aplicacao inteira sobe (todos os beans se resolvem, nenhuma configuracao
+# quebrada). Esse teste ja pegaria, por exemplo, o erro de ObjectMapper
+# que derrubou o boot em producao.
+#
+# Aqui o banco e H2 em memoria, e nao o MySQL: o objetivo do teste e o
+# wiring do Spring, nao o schema. Por isso o Flyway fica desligado - as
+# migrations sao escritas em SQL de MySQL e nao rodariam no H2 - e o
+# schema e criado pelo Hibernate so para este teste. Em producao e
+# desenvolvimento continua valendo a regra do projeto: schema so muda por
+# migration versionada (ddl-auto: validate).
+app:
+  datasource:
+    url: jdbc:h2:mem:wecti_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  cors:
+    allowed-origins: http://localhost:5173
+  frontend-url: http://localhost:5173
+
+spring:
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        type:
+          preferred_uuid_jdbc_type: VARCHAR
+
+# Valor fixo so para o contexto subir - nao e segredo de nada, o teste nao
+# emite token real.
+jwt:
+  secret: segredo-apenas-para-teste-automatizado-nao-usar-em-producao-1234567890
