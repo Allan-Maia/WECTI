@@ -34,6 +34,13 @@ app:
   # Configure FRONTEND_URL com o dominio real assim que o frontend for
   # publicado.
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  rate-limit:
+    # Trava forca bruta nas rotas de autenticacao
+    # (ver RateLimitAutenticacaoFilter). Conta apenas tentativas que
+    # FALHAM: numa palestra a turma toda sai pelo mesmo IP do Wi-Fi do
+    # campus, e somar acessos bem-sucedidos bloquearia alunos legitimos.
+    max-falhas: ${RATE_LIMIT_MAX_FALHAS:10}
+    janela-minutos: ${RATE_LIMIT_JANELA_MINUTOS:15}
 
 spring:
   application:
@@ -59,12 +66,32 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Em producao a aplicacao fica ATRAS do servidor web da hospedagem, que
+  # e quem termina o HTTPS (certificado TLS) e repassa a requisicao pra ca
+  # em HTTP interno. Sem isto, a aplicacao enxerga toda requisicao como
+  # "http" e com o IP do proxy, o que quebra duas coisas:
+  #
+  #   1. o IP usado pelo limite de tentativas de login
+  #      (RateLimitAutenticacaoFilter) seria SEMPRE o do proxy - um unico
+  #      atacante bloquearia o site inteiro;
+  #   2. qualquer URL que a aplicacao montar sairia como http:// mesmo o
+  #      site estando em https://.
+  #
+  # "framework" faz o Spring ler os cabecalhos X-Forwarded-* que o proxy
+  # envia e corrigir esquema, host e IP de origem.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:framework}
 
 springdoc:
   swagger-ui:
     path: /docs
+    # Documentacao interativa da API: fica ligada em desenvolvimento, mas
+    # em producao normalmente nao ha motivo pra deixar o mapa completo dos
+    # endpoints aberto pra qualquer visitante - desligue com
+    # SPRINGDOC_ENABLED=false.
+    enabled: ${SPRINGDOC_ENABLED:true}
   api-docs:
     path: /api-docs
+    enabled: ${SPRINGDOC_ENABLED:true}
 
 jwt:
   # Idem: sem default. Configure JWT_SECRET com um valor aleatorio forte

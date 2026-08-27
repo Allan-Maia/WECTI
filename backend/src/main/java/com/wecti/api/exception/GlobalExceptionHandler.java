@@ -12,6 +12,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -83,6 +84,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErroResponse> handleCorpoInvalido(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErroResponse.de(400, "campo_invalido", "Corpo da requisicao invalido ou malformado"));
+    }
+
+    /**
+     * URL que nao corresponde a nenhuma rota. Sem este tratamento, cai no
+     * handler generico abaixo e vira 500 com stack trace no log - o que e
+     * errado em dois sentidos: 500 diz "o servidor quebrou" quando na
+     * verdade o endereco e que nao existe, e em producao qualquer robo
+     * varrendo enderecos encheria o log de stack trace.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErroResponse> handleRotaInexistente(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErroResponse.de(404, "recurso_nao_encontrado", "Endereco nao encontrado"));
     }
 
     /**

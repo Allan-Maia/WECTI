@@ -1,0 +1,21 @@
+# O site e uma aplicacao de pagina unica: as rotas (/eventos, /validar/...,
+# /checkin/confirmar/...) existem apenas no navegador, nao como arquivos no
+# servidor. Sem esta regra, abrir uma dessas URLs direto - que e exatamente
+# o que acontece quando alguem escaneia o QR code do check-in ou do
+# certificado - devolveria 404, porque o Apache procuraria um arquivo com
+# aquele nome.
+#
+# FallbackResource entrega o index.html para qualquer caminho que nao seja
+# um arquivo existente, e o roteador do navegador cuida do resto. Arquivos
+# reais (JS, CSS, imagens) continuam sendo servidos normalmente.
+FallbackResource /index.html
+
+# Versoes antigas do Apache podem nao ter FallbackResource; o bloco abaixo
+# faz o mesmo com mod_rewrite e e ignorado se o modulo nao existir.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
