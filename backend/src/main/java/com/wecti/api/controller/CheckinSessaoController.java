@@ -1,19 +1,21 @@
 package com.wecti.api.controller;
 
 import com.wecti.api.dto.CheckinResponse;
+import com.wecti.api.dto.ConfirmarCheckinRequest;
 import com.wecti.api.dto.EventoCheckinResponse;
 import com.wecti.api.dto.NovaSessaoCheckinRequest;
+import com.wecti.api.dto.QrCodeSessaoResponse;
 import com.wecti.api.dto.SessaoCheckinResponse;
 import com.wecti.api.security.AuthenticatedUser;
 import com.wecti.api.service.CheckinSessaoService;
 import com.wecti.api.service.CheckinService;
+import com.wecti.api.service.CodigoRotativoCheckin;
 import com.wecti.api.service.EventoService;
 import com.wecti.api.service.QrCodeService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,15 +35,18 @@ public class CheckinSessaoController {
     private final CheckinService checkinService;
     private final EventoService eventoService;
     private final QrCodeService qrCodeService;
+    private final CodigoRotativoCheckin codigoRotativo;
     private final String frontendUrl;
 
     public CheckinSessaoController(CheckinSessaoService checkinSessaoService, CheckinService checkinService,
                                     EventoService eventoService, QrCodeService qrCodeService,
+                                    CodigoRotativoCheckin codigoRotativo,
                                     @Value("${app.frontend-url}") String frontendUrl) {
         this.checkinSessaoService = checkinSessaoService;
         this.checkinService = checkinService;
         this.eventoService = eventoService;
         this.qrCodeService = qrCodeService;
+        this.codigoRotativo = codigoRotativo;
         this.frontendUrl = frontendUrl;
     }
 
@@ -62,8 +68,13 @@ public class CheckinSessaoController {
     }
 
     /**
-     * O link embutido no QR precisa ser um endereço que o CELULAR de quem
-     * escaneia consiga abrir - "app.frontend-url" fixo (default
+     * QR da janela atual. A tela do admin chama isso em loop, uma vez por
+     * janela (ver {@code codigo_expira_em} na resposta) - o conteúdo muda
+     * a cada chamada porque o código embutido rotaciona, e é isso que
+     * impede que um print da tela mandado no grupo continue valendo.
+     *
+     * <p>O link precisa ser um endereço que o CELULAR de quem escaneia
+     * consiga abrir - "app.frontend-url" fixo (default
      * http://localhost:5173) só funciona quando quem escaneia é a MESMA
      * máquina que roda o backend, o que nunca é o caso na prática (é
      * sempre outro aparelho). Em vez disso, usamos o header Origin da
@@ -78,19 +89,20 @@ public class CheckinSessaoController {
      * antes desse código rodar.
      */
     @GetMapping("/checkin-sessoes/{sessaoId}/qrcode")
-    public ResponseEntity<byte[]> qrcode(@PathVariable UUID sessaoId, HttpServletRequest request) {
-        checkinSessaoService.buscarValida(sessaoId);
+    public QrCodeSessaoResponse qrcode(@PathVariable UUID sessaoId, HttpServletRequest request) {
+        var sessao = checkinSessaoService.buscarValida(sessaoId);
         String origin = request.getHeader("Origin");
         String base = (origin != null && !origin.isBlank()) ? origin : frontendUrl;
-        String url = base + "/checkin/confirmar/" + sessaoId;
-        byte[] png = qrCodeService.gerarPng(url);
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(png);
+        String url = base + "/checkin/confirmar/" + sessaoId + "?c=" + codigoRotativo.codigoAtual(sessao);
+        String png = Base64.getEncoder().encodeToString(qrCodeService.gerarPng(url));
+        return new QrCodeSessaoResponse(png, codigoRotativo.fimDaJanelaAtual(), sessao.getExpiraEm());
     }
 
     @PostMapping("/checkin-sessoes/{sessaoId}/confirmar")
     public CheckinResponse confirmar(@PathVariable UUID sessaoId,
+                                      @Valid @RequestBody ConfirmarCheckinRequest request,
                                       @AuthenticationPrincipal AuthenticatedUser autenticado) {
-        var checkin = checkinSessaoService.confirmar(sessaoId, autenticado.id());
+        var checkin = checkinSessaoService.confirmar(sessaoId, autenticado.id(), request.codigo());
         return CheckinResponse.de(checkin, checkin.getInscricao().getEvento());
     }
 }

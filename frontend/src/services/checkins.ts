@@ -1,23 +1,25 @@
 import api from './api';
-import type { Checkin, EventoCheckin, SessaoCheckin, TipoSessaoCheckin } from '../types';
+import type { Checkin, EventoCheckin, QrCodeSessao, SessaoCheckin, TipoSessaoCheckin } from '../types';
 
-/** Admin/professor gera uma sessão de check-in (entrada) ou check-out
- *  (saída) pro evento - o QR resultante fica válido por 6 horas. */
+/** Admin gera uma sessão de check-in (entrada) ou check-out (saída) pro
+ *  evento. A sessão vale pelo horário do evento - fora dele, a API
+ *  recusa a criação. */
 export function criarSessaoCheckin(eventoId: string, tipo: TipoSessaoCheckin) {
   return api.post<SessaoCheckin>(`/eventos/${eventoId}/checkin-sessoes`, { tipo }).then((res) => res.data);
 }
 
-/** Baixa o PNG do QR code autenticado - um <img src> direto nao manda o
- *  header Authorization, entao precisa passar pelo axios e virar blob. */
-export function baixarQrCodeSessao(sessaoId: string) {
-  return api
-    .get(`/checkin-sessoes/${sessaoId}/qrcode`, { responseType: 'blob' })
-    .then((res) => res.data as Blob);
+/** Busca o QR da janela atual. Precisa ser chamado de novo a cada
+ *  `codigo_expira_em`: o link embutido carrega um código rotativo, e o
+ *  QR anterior deixa de ser aceito. */
+export function buscarQrCodeSessao(sessaoId: string) {
+  return api.get<QrCodeSessao>(`/checkin-sessoes/${sessaoId}/qrcode`).then((res) => res.data);
 }
 
-/** Chamado pelo aluno ao escanear o QR com a câmera do celular. */
-export function confirmarCheckinSessao(sessaoId: string) {
-  return api.post<Checkin>(`/checkin-sessoes/${sessaoId}/confirmar`).then((res) => res.data);
+/** Chamado pelo aluno ao escanear o QR com a câmera do celular. O
+ *  `codigo` vem do parâmetro `c` da URL que estava no QR - sem ele (ou
+ *  com um já vencido) a API recusa. */
+export function confirmarCheckinSessao(sessaoId: string, codigo: string) {
+  return api.post<Checkin>(`/checkin-sessoes/${sessaoId}/confirmar`, { codigo }).then((res) => res.data);
 }
 
 /** Relatório de presença (admin/professor) - quem já fez check-in nesse

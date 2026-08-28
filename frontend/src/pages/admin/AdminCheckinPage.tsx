@@ -1,22 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import PageContainer from '../../components/PageContainer';
 import Button from '../../components/Button';
 import { LoadingBlock } from '../../components/LoadingSpinner';
 import EmptyState from '../../components/EmptyState';
 import { useEventos } from '../../hooks/useEventos';
-import { criarSessaoCheckin, baixarQrCodeSessao, listarCheckinsDoEvento } from '../../services/checkins';
+import { criarSessaoCheckin, buscarQrCodeSessao, listarCheckinsDoEvento } from '../../services/checkins';
 import { extrairMensagemErro } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatarDataHora } from '../../utils/data';
 import type { EventoCheckin, SessaoCheckin, TipoSessaoCheckin } from '../../types';
 
+/** Folga depois do fim da janela, pra pedir o QR seguinte já dentro da
+ *  janela nova e não pegar o código velho por causa de arredondamento de
+ *  relógio. */
+const FOLGA_MS = 1000;
+
 /**
- * Admin/professor escolhe o evento e o tipo de sessão (entrada ou saída)
- * e gera um QR code pra projetar na tela. Cada aluno inscrito escaneia
- * com a câmera do próprio celular (Android ou iOS, sem app nenhum) - a
- * câmera abre a URL embutida no QR direto no navegador, que confirma a
- * presença dele autenticado como aluno. Ver CheckinSessaoController e
+ * Admin escolhe o evento e o tipo de sessão (entrada ou saída) e gera um
+ * QR code pra projetar na tela. Cada aluno inscrito escaneia com a câmera
+ * do próprio celular (Android ou iOS, sem app nenhum) - a câmera abre a
+ * URL embutida no QR direto no navegador, que confirma a presença dele
+ * autenticado como aluno. Ver CheckinSessaoController e
  * docs/openapi.yaml.
+ *
+ * O QR **se renova sozinho** enquanto essa tela fica aberta: o link
+ * embutido carrega um código que vale só por uma janela de tempo curta.
+ * É o que impede que um aluno presente fotografe a tela, mande no grupo e
+ * quem não veio marque presença de casa. Por isso a tela precisa ficar
+ * aberta e projetada durante o check-in - se ela for fechada, o QR
+ * congela e para de ser aceito na janela seguinte.
  */
 export default function AdminCheckinPage() {
   const { eventos, carregando: carregandoEventos } = useEventos({});
@@ -25,17 +37,12 @@ export default function AdminCheckinPage() {
   const [eventoId, setEventoId] = useState('');
   const [tipo, setTipo] = useState<TipoSessaoCheckin>('ENTRADA');
   const [sessao, setSessao] = useState<SessaoCheckin | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [qrCodePng, setQrCodePng] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
+  const [erroRotacao, setErroRotacao] = useState<string | null>(null);
 
   const [participantes, setParticipantes] = useState<EventoCheckin[]>([]);
   const [carregandoParticipantes, setCarregandoParticipantes] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
-    };
-  }, [qrCodeUrl]);
 
   // Lista de presença - recarrega sempre que o evento selecionado muda
   // (e também depois de gerar um QR, via recarregarParticipantes abaixo,
@@ -64,11 +71,49 @@ export default function AdminCheckinPage() {
    *  mudam - sem isso, o QR (e o link embutido nele) continuavam sendo
    *  os do evento/tipo antigo, só o texto acima mudava pra refletir a
    *  nova seleção, dando a falsa impressão de que era o QR certo. */
-  const limparQrCode = () => {
+  const limparQrCode = useCallback(() => {
     setSessao(null);
-    if (qrCodeUrl) URL.revokeObjectURL(qrCodeUrl);
-    setQrCodeUrl(null);
-  };
+    setQrCodePng(null);
+    setErroRotacao(null);
+  }, []);
+
+  /**
+   * Mantém o QR da tela sempre na janela atual: busca o de agora e
+   * reagenda a próxima busca pro instante em que esse vence.
+   *
+   * Isso não é um refresh cosmético - o QR anterior deixa de ser aceito
+   * pela API. Se a rotação parar (rede caiu, sessão acabou), o QR na tela
+   * vira decoração e os alunos levam erro ao escanear, então o erro
+   * aparece no lugar do QR em vez de deixar a imagem velha ali.
+   */
+  useEffect(() => {
+    const sessaoId = sessao?.id;
+    if (!sessaoId) return;
+
+    let cancelado = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const atualizar = async () => {
+      try {
+        const qr = await buscarQrCodeSessao(sessaoId);
+        if (cancelado) return;
+        setQrCodePng(qr.png_base64);
+        setErroRotacao(null);
+        const emMs = new Date(qr.codigo_expira_em).getTime() - Date.now() + FOLGA_MS;
+        timer = setTimeout(atualizar, Math.max(emMs, FOLGA_MS));
+      } catch (e) {
+        if (cancelado) return;
+        setQrCodePng(null);
+        setErroRotacao(extrairMensagemErro(e, 'O QR code parou de ser atualizado. Gere um novo.'));
+      }
+    };
+    atualizar();
+
+    return () => {
+      cancelado = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [sessao?.id]);
 
   const selecionarEvento = (novoEventoId: string) => {
     setEventoId(novoEventoId);
@@ -88,10 +133,9 @@ export default function AdminCheckinPage() {
     setGerando(true);
     limparQrCode();
     try {
-      const novaSessao = await criarSessaoCheckin(eventoId, tipo);
-      const blob = await baixarQrCodeSessao(novaSessao.id);
-      setSessao(novaSessao);
-      setQrCodeUrl(URL.createObjectURL(blob));
+      // O primeiro QR (e todos os seguintes) vêm do efeito de rotação
+      // acima, disparado por essa mudança de sessão.
+      setSessao(await criarSessaoCheckin(eventoId, tipo));
     } catch (e) {
       notificarErro(extrairMensagemErro(e, 'Não foi possível gerar o QR code.'));
     } finally {
@@ -145,16 +189,38 @@ export default function AdminCheckinPage() {
           </div>
         )}
 
-        {sessao && qrCodeUrl && (
+        {sessao && (
           <div className="flex flex-col items-center gap-3 rounded-card border border-accent/30 bg-accent/5 p-8">
             <p className="text-sm text-text-muted">
               QR de <span className="font-semibold text-text">{tipo === 'ENTRADA' ? 'entrada' : 'saída'}</span> para
             </p>
             <p className="text-lg font-bold text-text">{eventoSelecionado?.titulo}</p>
-            <img src={qrCodeUrl} alt="QR code de check-in" className="h-72 w-72 rounded-lg bg-white p-3" />
+
+            {qrCodePng && (
+              <img
+                src={`data:image/png;base64,${qrCodePng}`}
+                alt="QR code de check-in"
+                className="h-72 w-72 rounded-lg bg-white p-3"
+              />
+            )}
+
+            {!qrCodePng && !erroRotacao && <LoadingBlock mensagem="Gerando QR code..." />}
+
+            {erroRotacao && (
+              <div className="flex h-72 w-72 flex-col items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/5 p-6 text-center">
+                <span className="text-3xl">⚠️</span>
+                <p className="text-sm text-red-400">{erroRotacao}</p>
+              </div>
+            )}
+
             <p className="text-xs text-text-muted">
-              Válido até {new Date(sessao.expira_em).toLocaleString('pt-BR')} - peça pro aluno escanear com a
-              câmera do próprio celular
+              Check-in aberto até {new Date(sessao.expira_em).toLocaleString('pt-BR')} - peça pro aluno escanear
+              com a câmera do próprio celular
+            </p>
+            <p className="max-w-md text-center text-xs text-text-muted">
+              Este QR se renova sozinho a cada poucos instantes, pra que uma foto da tela não sirva pra quem não
+              está na sala. <span className="font-medium text-text">Deixe esta tela aberta e projetada</span>{' '}
+              durante o check-in.
             </p>
           </div>
         )}

@@ -110,14 +110,15 @@ antes**, porque uma delas apaga uma coluna.
 2. cPanel → **phpMyAdmin** → selecionar o banco → aba **SQL** → colar o
    conteúdo de `docs/verificar-banco.sql` e executar. Ele mostra em que
    versão o schema está e se alguma migration falhou.
-3. Comparar com o que o sistema espera hoje: **versão 4**.
+3. Comparar com o que o sistema espera hoje: **versão 5**.
 
 | Última versão no banco | O que o Flyway vai aplicar sozinho |
 |---|---|
-| 1 | V2, V3 e V4 |
-| 2 | V3 e V4 |
-| 3 | Só a V4 |
-| 4 | Nada — já está atualizado |
+| 1 | V2, V3, V4 e V5 |
+| 2 | V3, V4 e V5 |
+| 3 | V4 e V5 |
+| 4 | Só a V5 |
+| 5 | Nada — já está atualizado |
 
 O que cada uma faz:
 
@@ -127,6 +128,9 @@ O que cada uma faz:
   é usada por nada hoje, mas é o motivo do backup.
 - **V3** — adiciona `curso` em usuários.
 - **V4** — adiciona `codigo` em certificados e preenche os já existentes.
+- **V5** — adiciona `segredo` em `sessoes_checkin`, usado pelo código
+  rotativo do QR de check-in. Sessões antigas ganham um segredo aleatório
+  próprio.
 
 > Se a consulta 2 do arquivo retornar alguma linha (`success = 0`), **não
 > suba a aplicação**: há uma migration que falhou no meio e o banco está
@@ -202,6 +206,26 @@ variável substitui o padrão inteiro.
 | `SPRINGDOC_ENABLED` | `false` | Desliga a documentação interativa da API (`/docs` e `/api-docs`). Não há motivo para deixar o mapa dos endpoints aberto ao público |
 | `RATE_LIMIT_MAX_FALHAS` | `10` (padrão) | Tentativas de login com senha errada antes de bloquear o IP |
 | `RATE_LIMIT_JANELA_MINUTOS` | `15` (padrão) | Duração do bloqueio |
+| `CHECKIN_JANELA_CODIGO_SEGUNDOS` | `60` (padrão) | De quanto em quanto tempo o QR de check-in se renova |
+| `CHECKIN_TOLERANCIA_ANTES_MINUTOS` | `30` (padrão) | Quanto antes do evento o check-in já abre |
+| `CHECKIN_TOLERANCIA_DEPOIS_MINUTOS` | `30` (padrão) | Quanto depois do fim o check-out ainda é aceito |
+
+Sobre a renovação do QR: ele é o mesmo para a sala inteira — está
+projetado, não há como ser individual. Para que uma foto da tela não
+sirva para quem não veio, o link embutido carrega um código que vale só
+por uma janela curta, e a tela do admin busca o QR seguinte sozinha. Um
+print mandado no grupo vence junto com a janela em que foi tirado.
+
+Diminuir `CHECKIN_JANELA_CODIGO_SEGUNDOS` aperta o cerco; aumentar dá
+mais folga para quem escaneou e ainda precisou fazer login antes de
+confirmar. A janela anterior também é aceita, então na prática o código
+vale entre uma e duas janelas. **Não deixe abaixo de uns 30 segundos** —
+abaixo disso, aluno com internet ruim começa a perder check-in legítimo.
+
+As tolerâncias existem porque a sessão de check-in agora vale pelo
+horário do próprio evento, e não mais por 6 horas a partir de quando foi
+gerada. Se as palestras costumam atrasar, aumente
+`CHECKIN_TOLERANCIA_DEPOIS_MINUTOS`.
 
 Sobre o limite de tentativas: ele conta **apenas tentativas que falham**.
 Numa palestra, a turma toda acessa pelo mesmo Wi-Fi e sai com o mesmo IP
@@ -491,6 +515,9 @@ reconstruídos.
 - [ ] Um aluno consegue se cadastrar e se inscrever
 - [ ] O QR de check-in gerado aponta para `https://jadir9152.c44.integrator.host/...`
 - [ ] Um celular consegue ler o QR e confirmar presença
+- [ ] O QR na tela do admin **muda sozinho** a cada ~1 minuto
+- [ ] Um link de QR copiado e aberto 3 minutos depois é recusado (é a
+      trava contra repassar o QR para quem não está na sala)
 - [ ] O certificado sai em PDF e o código valida em `/validar`
 - [ ] `/docs` **não** abre (se `SPRINGDOC_ENABLED=false`)
 - [ ] 11 tentativas de login com senha errada devolvem `429`

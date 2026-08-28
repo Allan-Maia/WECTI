@@ -573,6 +573,22 @@ paths:
   # do proprio celular (Android ou iOS, sem precisar de app nenhum) - a
   # camera abre a URL embutida no QR direto no navegador, que chama
   # POST /checkin-sessoes/{sessaoId}/confirmar autenticado como aluno.
+  #
+  # O QR e o MESMO pra sala inteira - nao ha como ser individual, ele esta
+  # projetado. Duas travas impedem que ele seja repassado pra quem nao
+  # esta presente:
+  #
+  #  1. CODIGO ROTATIVO. A URL do QR carrega ?c=<codigo>, derivado do
+  #     segredo da sessao e da janela de tempo atual (HMAC-SHA256, padrao
+  #     de 60s, janela anterior tambem aceita). O GET .../qrcode devolve o
+  #     codigo da janela atual e diz em codigo_expira_em quando buscar o
+  #     proximo - a tela do admin fica nesse loop enquanto estiver aberta.
+  #     Um print mandado no grupo vence junto com a janela em que foi
+  #     tirado. O segredo nunca sai da API.
+  #  2. JANELA DO EVENTO. A sessao so aceita confirmacao entre o inicio e
+  #     o fim do proprio evento, mais as tolerancias de
+  #     app.checkin.tolerancia-*-minutos. Antes valia "criacao + 6h", o
+  #     que deixava um QR da manha ainda funcionando a tarde.
   /eventos/{eventoId}/checkins:
     parameters:
       - name: eventoId
@@ -634,6 +650,11 @@ paths:
     post:
       tags: [Checkins]
       summary: Gera uma sessão de check-in/check-out pro evento (admin)
+      description: >
+        Só pode ser criada dentro da janela do evento (início menos a
+        tolerância de antes, até o fim mais a tolerância de depois) - fora
+        disso o QR não valeria nada, então a API recusa na hora em vez de
+        deixar o admin projetar um QR morto.
       requestBody:
         required: true
         content:
@@ -647,6 +668,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessaoCheckin'
+        '422':
+          description: Fora da janela de check-in do evento (ainda não abriu, ou já fechou)
 
   /checkin-sessoes/{sessaoId}/qrcode:
     parameters:
@@ -658,21 +681,31 @@ paths:
           format: uuid
     get:
       tags: [Checkins]
-      summary: Imagem do QR code da sessão, pra projetar na tela (admin)
+      summary: QR code da janela atual, pra projetar na tela (admin)
       description: >
         O QR codifica a URL de confirmação
-        (`<frontend>/checkin/confirmar/{sessaoId}`) - a camera do celular
-        do aluno abre direto, sem precisar de app.
+        (`<frontend>/checkin/confirmar/{sessaoId}?c=<codigo>`) - a câmera
+        do celular do aluno abre direto, sem precisar de app.
+
+        O `c` muda a cada janela de tempo, então esta resposta vale por
+        pouco: `codigo_expira_em` diz quando a tela do admin deve pedir o
+        próximo. Não é refresh cosmético - a partir daí o QR anterior
+        deixa de ser aceito em `/confirmar`.
+
+        Devolve JSON (e não `image/png`, como na versão anterior)
+        justamente porque a imagem sozinha não basta: sem
+        `codigo_expira_em` a tela não teria como saber o ritmo da rotação.
       responses:
         '200':
-          description: Imagem do QR code
+          description: QR da janela atual
           content:
-            image/png:
+            application/json:
               schema:
-                type: string
-                format: binary
+                $ref: '#/components/schemas/QrCodeSessao'
+        '404':
+          description: Sessão não encontrada
         '422':
-          description: Sessão já expirada
+          description: Fora da janela de check-in do evento
 
   /checkin-sessoes/{sessaoId}/confirmar:
     parameters:
@@ -685,6 +718,20 @@ paths:
     post:
       tags: [Checkins]
       summary: Aluno confirma a própria entrada/saída ao escanear o QR
+      description: >
+        O `codigo` é o parâmetro `c` da URL que veio no QR. Precisa ser o
+        da janela atual ou o da imediatamente anterior - é o que faz um
+        link repassado no grupo parar de funcionar minutos depois.
+
+        Vai no corpo, e não na query string, pra não ficar registrado nos
+        logs de acesso do servidor web, de onde alguém poderia pescar
+        códigos ainda dentro da janela.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmarCheckin'
       responses:
         '200':
           description: Check-in ou check-out confirmado
@@ -692,14 +739,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Checkin'
+        '400':
+          description: Código ausente no corpo
         '404':
-          description: QR code inválido, expirado, ou aluno não inscrito no evento
+          description: Sessão inexistente, ou aluno não inscrito no evento
         '409':
           description: Check-in já realizado
         '422':
           description: >
-            QR expirado, inscrição cancelada, ou tentativa de check-out
-            sem ter feito check-in antes
+            Código de uma janela já vencida (QR antigo ou repassado), fora
+            da janela do evento, inscrição cancelada, ou tentativa de
+            check-out sem ter feito check-in antes
 
   # ---------------------------------------------------------------------
   # Certificados
@@ -1117,8 +1167,44 @@ components:
           type: string
           format: date-time
           description: >
-            Validade do QR code (6 horas após a criação) - depois disso
-            o endpoint de confirmação passa a responder 422.
+            Fim da janela de check-in: `data_hora_fim` do evento mais a
+            tolerância configurada. Depois disso o endpoint de confirmação
+            responde 422. (Antes era "criação + 6 horas", o que deixava um
+            QR gerado de manhã ainda valendo à tarde.)
+
+    QrCodeSessao:
+      type: object
+      description: >
+        O QR da janela atual. Note que `png_base64` sozinho não basta: sem
+        `codigo_expira_em` a tela não saberia quando trocar, e passaria a
+        exibir um QR que a API já não aceita.
+      properties:
+        png_base64:
+          type: string
+          description: >
+            Imagem PNG do QR em Base64, pronta pra um
+            `src="data:image/png;base64,..."`.
+        codigo_expira_em:
+          type: string
+          format: date-time
+          description: >
+            Quando este QR deixa de ser aceito. A tela do admin busca o
+            próximo nesse instante.
+        sessao_expira_em:
+          type: string
+          format: date-time
+          description: >
+            Fim da janela de check-in do evento. Passou disso, não adianta
+            gerar outro QR.
+
+    ConfirmarCheckin:
+      type: object
+      required: [codigo]
+      properties:
+        codigo:
+          type: string
+          description: Parâmetro `c` da URL lida do QR code.
+          example: a3f19c2d4b
 
     PontuacaoPeriodo:
       type: object

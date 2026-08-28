@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import PageContainer from '../../components/PageContainer';
 import Button from '../../components/Button';
 import { LoadingBlock } from '../../components/LoadingSpinner';
@@ -9,14 +9,24 @@ import type { Checkin } from '../../types';
 
 /**
  * Aluno chega aqui ao escanear com a câmera do celular o QR code
- * projetado pelo admin/professor (link embutido no PNG gerado por
+ * projetado pelo admin (link embutido no PNG devolvido por
  * GET /checkin-sessoes/{sessaoId}/qrcode). A confirmação em si acontece
  * automaticamente ao abrir a página, autenticado como aluno - ver
  * ProtectedRoute/LoginPage pro fluxo de login-e-volta caso o aluno ainda
- * não estivesse logado quando escaneou.
+ * não estivesse logado quando escaneou (a query string é preservada, o
+ * que importa muito aqui: o código está nela).
+ *
+ * O `c` da URL é o código rotativo daquela janela de tempo. É o que
+ * impede que o link, repassado no grupo, sirva pra quem não está na
+ * sala - alguns minutos depois ele não vale mais. Se o aluno demorar
+ * (por exemplo, precisou fazer login no meio), a API recusa e ele
+ * escaneia de novo o QR que está na tela - dessa vez já logado, é
+ * instantâneo.
  */
 export default function CheckinConfirmarPage() {
   const { sessaoId } = useParams<{ sessaoId: string }>();
+  const [searchParams] = useSearchParams();
+  const codigo = searchParams.get('c');
   const navigate = useNavigate();
   const [carregando, setCarregando] = useState(true);
   const [checkin, setCheckin] = useState<Checkin | null>(null);
@@ -30,12 +40,14 @@ export default function CheckinConfirmarPage() {
     if (jaConfirmouRef.current) return;
     jaConfirmouRef.current = true;
 
-    if (!sessaoId) {
-      setErro('QR code inválido.');
+    if (!sessaoId || !codigo) {
+      // Sem o `c` na URL o link é de um QR antigo (ou foi digitado à
+      // mão) - não dá pra confirmar nada com ele.
+      setErro('QR code inválido. Escaneie o que está na tela agora.');
       setCarregando(false);
       return;
     }
-    confirmarCheckinSessao(sessaoId)
+    confirmarCheckinSessao(sessaoId, codigo)
       .then((resultado) => {
         setCheckin(resultado);
         setErro(null);
@@ -45,7 +57,7 @@ export default function CheckinConfirmarPage() {
         setCheckin(null);
       })
       .finally(() => setCarregando(false));
-  }, [sessaoId]);
+  }, [sessaoId, codigo]);
 
   return (
     <PageContainer titulo="Confirmação de presença">
@@ -69,6 +81,10 @@ export default function CheckinConfirmarPage() {
             <span className="text-4xl">⚠️</span>
             <h2 className="text-lg font-bold text-text">Não foi possível confirmar</h2>
             <p className="text-sm text-red-400">{erro}</p>
+            <p className="text-xs text-text-muted">
+              O QR da tela muda de tempos em tempos. Se você demorou entre escanear e chegar aqui, é só
+              apontar a câmera de novo - agora que já está logado, vai direto.
+            </p>
           </>
         )}
 

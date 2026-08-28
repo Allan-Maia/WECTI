@@ -118,15 +118,26 @@ export interface EventoCheckin {
 // so afeta nomes de campo, nao valores de enum.
 export type TipoSessaoCheckin = 'ENTRADA' | 'SAIDA';
 
-/** Sessão de QR code de check-in/check-out gerada pelo admin/professor
- *  pra um evento - projetada na tela, o aluno confirma a própria presença
- *  escaneando com a câmera do celular (ver CheckinSessaoController). */
+/** Sessão de QR code de check-in/check-out gerada pelo admin pra um
+ *  evento - projetada na tela, o aluno confirma a própria presença
+ *  escaneando com a câmera do celular (ver CheckinSessaoController).
+ *  Dura o horário do evento, não mais 6 horas a partir da criação. */
 export interface SessaoCheckin {
   id: string;
   evento_id: string;
   tipo: TipoSessaoCheckin;
   criada_em: string;
   expira_em: string;
+}
+
+/** O QR da janela atual. O conteúdo muda a cada janela (um código
+ *  rotativo vai embutido no link), então a tela do admin precisa buscar
+ *  o próximo em `codigo_expira_em` - é isso que faz um print da tela
+ *  mandado no grupo parar de funcionar. */
+export interface QrCodeSessao {
+  png_base64: string;
+  codigo_expira_em: string;
+  sessao_expira_em: string;
 }
 
 export type EventoPontuacaoStatus = 'concluido' | 'no_show' | 'cancelado';
