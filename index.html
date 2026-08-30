@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WECTI – Tech Revolution: IA Generativa, Cloud & Desenvolvimento Inteligente</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── NAVBAR ── -->
+  <nav id="navbar">
+    <div class="nav-logo">
+      <!-- Mascot icon -->
+      <svg class="nav-logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Head -->
+        <rect x="9" y="8" width="18" height="14" rx="4" fill="none" stroke="#00e8c4" stroke-width="1.5"/>
+        <!-- Eyes -->
+        <circle cx="14" cy="14" r="2" fill="#00e8c4"/>
+        <circle cx="22" cy="14" r="2" fill="#00e8c4"/>
+        <!-- Eye glow -->
+        <circle cx="14" cy="14" r="1" fill="#fff" opacity="0.7"/>
+        <circle cx="22" cy="14" r="1" fill="#fff" opacity="0.7"/>
+        <!-- Mouth -->
+        <rect x="13" y="18" width="10" height="1.5" rx="0.75" fill="#00e8c4" opacity="0.7"/>
+        <!-- Antenna -->
+        <line x1="18" y1="8" x2="18" y2="4" stroke="#00e8c4" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="18" cy="3" r="1.5" fill="#00d4b0"/>
+        <!-- Neck -->
+        <rect x="16" y="22" width="4" height="2" fill="#00e8c4" opacity="0.5"/>
+        <!-- Body -->
+        <rect x="10" y="24" width="16" height="9" rx="3" fill="none" stroke="#00e8c4" stroke-width="1.5" opacity="0.8"/>
+        <!-- Body detail -->
+        <rect x="13" y="27" width="4" height="3" rx="1" fill="#00e8c4" opacity="0.3"/>
+        <circle cx="24" cy="28.5" r="1.5" fill="#00e8c4" opacity="0.5"/>
+        <!-- Arms -->
+        <line x1="10" y1="26" x2="6" y2="29" stroke="#00e8c4" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="26" y1="26" x2="30" y2="29" stroke="#00e8c4" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      WECTI
+    </div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#home">Home</a></li>
+      <li><a href="#sobre">Sobre</a></li>
+      <li><a href="#galeria">Galeria</a></li>
+      <li><a href="#contato" class="nav-cta">Contato</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </div>
+  </nav>
+
+  <!-- ── HERO ── -->
+  <section id="home">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="hero-content">
+      <div class="hero-text">
+        <div class="hero-eyebrow">Em breve · 6ª Edição</div>
+
+        <h1 class="hero-title">
+          Tech<br/>
+          Revolution<br/>
+          <em>WECTI 2026</em>
+        </h1>
+
+        <p class="hero-subtitle">
+          IA Generativa, Cloud e Desenvolvimento Inteligente — a 6ª edição da WECTI explora as tecnologias que estão transformando o mundo.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#sobre" class="btn-primary">Saiba mais</a>
+          <a href="#galeria" class="btn-outline">Ver edições anteriores</a>
+        </div>
+      </div>
+
+      <!-- Elemento visual decorativo lado direito -->
+      <div class="hero-visual">
+        <svg viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:420px;opacity:0.92;">
+          <defs>
+            <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#00e8c4" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#00e8c4" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#00a88a" stop-opacity="0.12"/>
+              <stop offset="100%" stop-color="#00a88a" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00e8c4"/>
+              <stop offset="100%" stop-color="#00a88a"/>
+            </linearGradient>
+            <filter id="blur1">
+              <feGaussianBlur stdDeviation="8"/>
+            </filter>
+          </defs>
+
+          <!-- Background glow blobs -->
+          <ellipse cx="210" cy="200" rx="180" ry="160" fill="url(#glow1)" filter="url(#blur1)"/>
+          <ellipse cx="280" cy="280" rx="120" ry="100" fill="url(#glow2)" filter="url(#blur1)"/>
+
+          <!-- Outer ring -->
+          <circle cx="210" cy="210" r="170" fill="none" stroke="#00e8c4" stroke-width="1" stroke-opacity="0.15" stroke-dasharray="6 4"/>
+          <!-- Mid ring -->
+          <circle cx="210" cy="210" r="130" fill="none" stroke="#00d4b0" stroke-width="1" stroke-opacity="0.2"/>
+          <!-- Inner ring -->
+          <circle cx="210" cy="210" r="90" fill="none" stroke="#00e8c4" stroke-width="1.5" stroke-opacity="0.3"/>
+
+          <!-- Cross lines -->
+          <line x1="210" y1="40" x2="210" y2="380" stroke="#00e8c4" stroke-width="0.8" stroke-opacity="0.12"/>
+          <line x1="40" y1="210" x2="380" y2="210" stroke="#00e8c4" stroke-width="0.8" stroke-opacity="0.12"/>
+          <line x1="90" y1="90" x2="330" y2="330" stroke="#00e8c4" stroke-width="0.6" stroke-opacity="0.08"/>
+          <line x1="330" y1="90" x2="90" y2="330" stroke="#00e8c4" stroke-width="0.6" stroke-opacity="0.08"/>
+
+          <!-- Dot nodes on outer ring -->
+          <circle cx="210" cy="40" r="4" fill="#00e8c4" fill-opacity="0.7"/>
+          <circle cx="380" cy="210" r="4" fill="#00e8c4" fill-opacity="0.7"/>
+          <circle cx="210" cy="380" r="4" fill="#00e8c4" fill-opacity="0.5"/>
+          <circle cx="40" cy="210" r="4" fill="#00e8c4" fill-opacity="0.5"/>
+          <circle cx="330" cy="90" r="3" fill="#00d4b0" fill-opacity="0.6"/>
+          <circle cx="330" cy="330" r="3" fill="#00d4b0" fill-opacity="0.6"/>
+          <circle cx="90" cy="90" r="3" fill="#00d4b0" fill-opacity="0.4"/>
+          <circle cx="90" cy="330" r="3" fill="#00d4b0" fill-opacity="0.4"/>
+
+          <!-- Mid ring nodes -->
+          <circle cx="210" cy="80" r="3" fill="#00e8c4" fill-opacity="0.5"/>
+          <circle cx="340" cy="210" r="3" fill="#00e8c4" fill-opacity="0.5"/>
+
+          <!-- Center badge -->
+          <circle cx="210" cy="210" r="72" fill="#0a0f0e" stroke="url(#lineGrad)" stroke-width="1.5"/>
+          <circle cx="210" cy="210" r="60" fill="rgba(0,232,196,0.06)" stroke="#00e8c4" stroke-width="0.8" stroke-opacity="0.4"/>
+
+          <!-- WECTI text -->
+          <text x="210" y="200" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" font-weight="900" letter-spacing="2" fill="url(#lineGrad)">WECTI</text>
+          <text x="210" y="222" text-anchor="middle" font-family="Inter,sans-serif" font-size="10" font-weight="500" letter-spacing="3" fill="#00e8c4" fill-opacity="0.6">6ª EDIÇÃO</text>
+          <line x1="170" y1="230" x2="250" y2="230" stroke="#00e8c4" stroke-width="0.8" stroke-opacity="0.4"/>
+          <text x="210" y="244" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" letter-spacing="1.5" fill="#00a88a" fill-opacity="0.7">2026</text>
+
+          <!-- Orbiting dot (animated) -->
+          <circle r="5" fill="#00e8c4" fill-opacity="0.85">
+            <animateMotion dur="8s" repeatCount="indefinite">
+              <mpath href="#orbitPath"/>
+            </animateMotion>
+          </circle>
+          <path id="orbitPath" d="M 210 80 A 130 130 0 1 1 209.99 80" fill="none"/>
+
+          <circle r="3.5" fill="#00d4b0" fill-opacity="0.6">
+            <animateMotion dur="13s" repeatCount="indefinite">
+              <mpath href="#orbitPath2"/>
+            </animateMotion>
+          </circle>
+          <path id="orbitPath2" d="M 210 40 A 170 170 0 1 0 209.99 40" fill="none"/>
+        </svg>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-value">5+</div>
+          <div class="stat-label">Edições realizadas</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">500+</div>
+          <div class="stat-label">Projetos inscritos</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── GALERIA ── -->
+  <section id="galeria">
+    <div class="container">
+      <div class="gallery-header">
+        <div>
+          <p class="section-label">Edições anteriores</p>
+          <h2 class="section-title">Galeria de fotos</h2>
+        </div>
+        <p class="section-desc" style="max-width:320px; font-size:0.875rem;">
+          Momentos marcantes das edições passadas da WECTI.
+        </p>
+      </div>
+
+      <div class="carousel-wrapper">
+        <button class="carousel-btn carousel-btn-prev" id="carouselPrev" aria-label="Anterior">&#8592;</button>
+        <div class="carousel-track-outer">
+          <div class="carousel-track" id="carouselTrack"></div>
+        </div>
+        <button class="carousel-btn carousel-btn-next" id="carouselNext" aria-label="Próximo">&#8594;</button>
+      </div>
+
+      <div class="carousel-dots" id="carouselDots"></div>
+      <p class="carousel-counter" id="carouselCounter"></p>
+    </div>
+  </section>
+
+  <!-- ── SOBRE ── -->
+  <section id="sobre">
+    <div class="container">
+      <div class="about-grid">
+
+        <!-- left: text -->
+        <div>
+          <p class="section-label">Sobre o evento</p>
+          <h2 class="section-title">O que é a WECTI?</h2>
+          <p class="section-desc">
+            A WECTI é o espaço onde estudantes apresentam projetos reais voltados às tecnologias que estão moldando o futuro: Inteligência Artificial Generativa, Cloud Computing e Desenvolvimento Inteligente.
+          </p>
+          <p class="section-desc" style="margin-top:1rem;">
+            Na 6ª edição, o tema <strong style="color:var(--accent)">Tech Revolution</strong> convida a comunidade acadêmica a explorar, debater e demonstrar como essas tecnologias estão transformando indústrias, negócios e a vida cotidiana.
+          </p>
+
+          <div class="about-cards-grid" style="margin-top:2.5rem;">
+            <div class="about-card">
+              <div class="about-icon">🤖</div>
+              <h3>IA Generativa</h3>
+              <p>LLMs, modelos de imagem e agentes autônomos aplicados a problemas reais.</p>
+            </div>
+            <div class="about-card">
+              <div class="about-icon">☁️</div>
+              <h3>Cloud</h3>
+              <p>Arquiteturas escaláveis, serverless e infraestrutura moderna na nuvem.</p>
+            </div>
+            <div class="about-card">
+              <div class="about-icon">⚙️</div>
+              <h3>Dev Inteligente</h3>
+              <p>Ferramentas, automações e práticas que aceleram o desenvolvimento de software.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- right: visual -->
+        <div class="about-visual" style="text-align:center;">
+          <div class="edition-badge">
+            <div>
+              <div class="edition-number">6ª</div>
+            </div>
+          </div>
+          <p class="edition-label">Edição · 2026</p>
+
+          <div class="about-card">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1rem;">Novidades em breve</div>
+            <p style="font-size:0.875rem; color:var(--text-muted); line-height:1.7;">
+              A 6ª edição da WECTI está sendo preparada com muito cuidado. Em breve: datas, programação, palestras e como inscrever seu projeto em <strong style="color:var(--accent)">Tech Revolution</strong>.
+            </p>
+            <div style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border); display:flex; gap:1rem; justify-content:center;">
+              <a href="#" class="btn-primary" style="font-size:0.825rem; padding:0.6rem 1.4rem;">Em breve</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer id="contato">
+    <div class="footer-logo">WECTI</div>
+    <div class="footer-divider"></div>
+    <p class="footer-text">
+      Workshop de Empreendedorismo, Ciência, Tecnologia e Inovação &mdash; Tech Revolution · 6ª Edição
+    </p>
+    <p class="footer-text" style="margin-top:1.5rem; font-size:0.75rem; opacity:0.5;">
+      © 2026 WECTI. Template desenvolvido para a 6ª edição.
+    </p>
+  </footer>
+
+  <!-- ── LIGHTBOX ── -->
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-backdrop" onclick="closeLightbox()"></div>
+    <button class="lightbox-nav lightbox-prev" onclick="lightboxNav(-1)">&#8592;</button>
+    <img id="lightboxImg" src="" alt="" />
+    <button class="lightbox-nav lightbox-next" onclick="lightboxNav(1)">&#8594;</button>
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  </div>
+
+  <!-- ── JS ── -->
+  <script>
+    // ── Hamburger menu ──
+    function toggleMenu() {
+      document.getElementById('navLinks').classList.toggle('open');
+    }
+
+    // ── Navbar scroll effect ──
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('navbar');
+      nav.style.background = window.scrollY > 40
+        ? 'rgba(10,10,15,0.96)'
+        : 'rgba(10,10,15,0.75)';
+    });
+
+    // ── Gallery data ──
+    // Profissionais (wecti/webcti) primeiro, ordenadas por número de sequência; celular no final
+    const allPhotos = [
+      "fotos/20250526_190558.jpg","fotos/2411062003-wecti-030.jpg","fotos/2411062006-wecti-036.jpg","fotos/20241108_103651.jpg",
+      "fotos/2411061937-wecti-013.jpg","fotos/2411070950-wecti-043.jpg","fotos/2411060942-wecti-029.jpg","fotos/2411070950-wecti-046.jpg",
+      "fotos/2411061931-wecti-005.jpg","fotos/20250526_190736.jpg","fotos/2411072118-webcti-042.jpg","fotos/2411062005-wecti-034.jpg",
+      "fotos/2411070913-wecti-013.jpg","fotos/2411070840-wecti-001.jpg","fotos/2411070910-wecti-009.jpg","fotos/2411071939-webcti-007.jpg",
+      "fotos/20250526_190336.jpg","fotos/2411062209-wecti-047.jpg","fotos/20250526_190630.jpg","fotos/2411062007-wecti-038.jpg",
+      "fotos/2411070917-wecti-025.jpg","fotos/20241106_112732.jpg","fotos/2411071954-webcti-009.jpg","fotos/2411061929-wecti-001.jpg",
+      "fotos/2411071909-webcti-015.jpg","fotos/2411082056-wecti-018.jpg","fotos/2411070914-wecti-018.jpg","fotos/2411072051-webcti-019.jpg",
+      "fotos/2411070909-wecti-006.jpg","fotos/2411061933-wecti-008.jpg","fotos/2411061943-wecti-017.jpg","fotos/20250526_190753.jpg",
+      "fotos/2411082108-wecti-024.jpg","fotos/2411070913-wecti-012.jpg","fotos/2411072012-webcti-035.jpg","fotos/2411060909-wecti-013.jpg",
+      "fotos/2411071106-wecti-048.jpg","fotos/2411072157-webcti-044.jpg","fotos/20241108_103544.jpg","fotos/2411062016-wecti-045.jpg",
+      "fotos/2411070926-wecti-037.jpg","fotos/20250526_190349.jpg","fotos/2411070913-wecti-015.jpg","fotos/2411071917-webcti-008.jpg",
+      "fotos/20250526_190411.jpg","fotos/20250526_190524.jpg","fotos/2411060911-wecti-016.jpg","fotos/2411060920-wecti-027.jpg",
+      "fotos/2411060943-wecti-030.jpg","fotos/2411072032-webcti-022.jpg","fotos/20241108_102230.jpg","fotos/20250526_190455.jpg",
+      "fotos/2411071042-wecti-047.jpg"
+    ];
+
+    // ── Carousel ──
+    let carouselIndex = 0;
+    let autoTimer = null;
+    let lightboxIndex = 0;
+
+    const track   = document.getElementById('carouselTrack');
+    const dotsEl  = document.getElementById('carouselDots');
+    const counter = document.getElementById('carouselCounter');
+
+    function visibleCount() {
+      return window.innerWidth >= 900 ? 3 : window.innerWidth >= 600 ? 2 : 1;
+    }
+
+    function buildCarousel() {
+      track.innerHTML = '';
+      dotsEl.innerHTML = '';
+      allPhotos.forEach((src, i) => {
+        const slide = document.createElement('div');
+        slide.className = 'carousel-slide';
+        slide.innerHTML = `<img src="${src}" alt="WECTI foto ${i+1}" loading="lazy" />`;
+        slide.addEventListener('click', () => openLightbox(i));
+        track.appendChild(slide);
+      });
+      const pages = Math.ceil(allPhotos.length / visibleCount());
+      for (let i = 0; i < pages; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'carousel-dot';
+        dot.setAttribute('aria-label', `Página ${i+1}`);
+        dot.addEventListener('click', () => goTo(i * visibleCount()));
+        dotsEl.appendChild(dot);
+      }
+      goTo(0);
+    }
+
+    function goTo(idx) {
+      const vc   = visibleCount();
+      const max  = allPhotos.length - vc;
+      carouselIndex = Math.max(0, Math.min(idx, max));
+      const slideW = track.parentElement.offsetWidth / vc;
+      track.style.transform = `translateX(-${carouselIndex * slideW}px)`;
+      counter.textContent = `${carouselIndex + 1} – ${Math.min(carouselIndex + vc, allPhotos.length)} de ${allPhotos.length}`;
+      // dots
+      const page = Math.floor(carouselIndex / vc);
+      document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === page));
+    }
+
+    function carouselNext() { goTo(carouselIndex + visibleCount()); resetAuto(); }
+    function carouselPrev() { goTo(carouselIndex - visibleCount()); resetAuto(); }
+
+    function startAuto() { autoTimer = setInterval(() => { const vc = visibleCount(); carouselIndex + vc >= allPhotos.length ? goTo(0) : goTo(carouselIndex + vc); }, 4000); }
+    function resetAuto()  { clearInterval(autoTimer); startAuto(); }
+
+    document.getElementById('carouselNext').addEventListener('click', carouselNext);
+    document.getElementById('carouselPrev').addEventListener('click', carouselPrev);
+    window.addEventListener('resize', () => { buildCarousel(); });
+
+    // Swipe support
+    let touchStartX = 0;
+    track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    track.addEventListener('touchend',   e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) dx < 0 ? carouselNext() : carouselPrev();
+    });
+
+    // ── Lightbox ──
+    function openLightbox(idx) {
+      lightboxIndex = idx;
+      document.getElementById('lightboxImg').src = allPhotos[idx];
+      document.getElementById('lightbox').classList.add('active');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+    }
+
+    function lightboxNav(dir) {
+      lightboxIndex = (lightboxIndex + dir + allPhotos.length) % allPhotos.length;
+      document.getElementById('lightboxImg').src = allPhotos[lightboxIndex];
+    }
+
+    document.addEventListener('keydown', e => {
+      if (!document.getElementById('lightbox').classList.contains('active')) return;
+      if (e.key === 'Escape')      closeLightbox();
+      if (e.key === 'ArrowRight')  lightboxNav(1);
+      if (e.key === 'ArrowLeft')   lightboxNav(-1);
+    });
+
+    // ── Init ──
+    buildCarousel();
+    startAuto();
+
+    // ── Intersection observer for fade-in ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.about-card, .stat-item').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(20px)';
+      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
