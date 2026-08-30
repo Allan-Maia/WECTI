@@ -1,6 +1,19 @@
 .claude/
 .idea/
 
+# Fotos ORIGINAIS das edicoes anteriores (228 MB, ~1,8 MB cada), direto da
+# camera. Esta linha impede que esta branch as adicione de novo - elas ja
+# estao versionadas na branch main, entao duplica-las aqui so somaria peso
+# ao historico sem trazer nada novo. Depois do merge com a main, os
+# arquivos continuam rastreados (o .gitignore nao desrastreia nada) e
+# seguem servindo de arquivo bruto.
+#
+# O que o SITE publica sao as versoes otimizadas em frontend/public/fotos/
+# (mesmas imagens, 1600px, 16 MB no total), e ESSAS sao versionadas de
+# proposito: sem elas, um build feito em outra maquina geraria a pagina
+# inicial com a galeria e as fotos dos palestrantes quebradas.
+/fotos/
+
 # Arquivos de ambiente com valores REAIS (senha do banco, JWT_SECRET).
 # docs/producao.env.exemplo e versionado de proposito - e so o modelo,
 # com os campos sensiveis em branco. Qualquer copia preenchida fica de

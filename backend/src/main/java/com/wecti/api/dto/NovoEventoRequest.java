@@ -2,6 +2,7 @@ package com.wecti.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
 import java.time.LocalDateTime;
@@ -20,5 +21,11 @@ public record NovoEventoRequest(
         @NotNull LocalDateTime dataHoraInicio,
         @NotNull LocalDateTime dataHoraFim,
         @NotNull @PositiveOrZero Integer pontos,
+        /**
+         * Numero de vagas. Opcional: deixar em branco (null) significa
+         * sem limite, que e como todos os eventos funcionavam antes -
+         * nao da para exigir aqui sem invalidar o que ja existe.
+         */
+        @Positive(message = "A capacidade deve ser de pelo menos 1 vaga") Integer capacidade,
         List<UUID> palestranteIds) {
 }

@@ -146,6 +146,21 @@ export default function AdminEventosPage() {
                     {formatarDataHora(evento.data_hora_inicio)} · {evento.pontos} pts
                     {evento.local ? ` · ${evento.local}` : ''}
                   </p>
+                  {/* Ocupação. Sem limite não vira "X/∞": mostra só quantos
+                      entraram, que é a informação que existe. */}
+                  <p className="mt-1 text-sm">
+                    <span aria-hidden>🎟️</span>{' '}
+                    {evento.capacidade == null ? (
+                      <span className="text-text-muted">
+                        {evento.inscritos} inscrito{evento.inscritos === 1 ? '' : 's'} · sem limite de vagas
+                      </span>
+                    ) : (
+                      <span className={evento.lotado ? 'font-medium text-amber-400' : 'text-text-muted'}>
+                        {evento.inscritos} de {evento.capacidade} vagas
+                        {evento.lotado ? ' · lotado' : ` · ${evento.vagas_restantes} restantes`}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variante="outline" onClick={() => abrirEdicao(evento)}>

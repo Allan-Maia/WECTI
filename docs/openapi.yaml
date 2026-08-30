@@ -892,6 +892,121 @@ paths:
               schema:
                 $ref: '#/components/schemas/PontuacaoPeriodo'
 
+  # ---------------------------------------------------------------------
+  # Ranking e pontos extras (gincanas)
+  # ---------------------------------------------------------------------
+  /ranking:
+    get:
+      tags: [Pontuacao]
+      summary: Classificação dos alunos por pontos no período
+      description: >
+        Uma rota só para os dois perfis - a diferença está no que volta.
+        O RGM dos alunos só é incluído quando quem chama é ADMIN (que
+        precisa dele para não lançar pontos no aluno errado); para o
+        ALUNO vem nome e curso, e mais nada. Quem decide isso é o perfil
+        do token, nunca um parâmetro da requisição.
+
+
+        Alunos empatados dividem a mesma posição, e a posição seguinte
+        pula (1, 2, 2, 4). Entram na lista todos os alunos com alguma
+        inscrição no período, mais os que receberam pontos extras.
+      parameters:
+        - name: periodo_id
+          in: query
+          description: Se omitido, usa o período atual
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Classificação do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ranking'
+        '404':
+          description: Nenhum período ativo no momento
+
+  /pontuacao-extra:
+    post:
+      tags: [Pontuacao]
+      summary: Lança pontos manualmente num aluno (somente admin)
+      description: >
+        Usado para premiar gincanas feitas durante as palestras. Os
+        pontos somam-se aos das palestras assistidas dentro do mesmo
+        período.
+
+
+        `pontos` pode ser negativo, para corrigir um lançamento a maior
+        sem apagar o histórico, e é limitado a 1000 por lançamento -
+        trava contra dedo escorregado, já que digitar 5000 em vez de 50
+        decidiria o ranking inteiro sem ninguém perceber até a premiação.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaPontuacaoExtra'
+      responses:
+        '201':
+          description: Pontos lançados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PontuacaoExtra'
+        '400':
+          description: Pontos zerados, acima do limite, motivo em branco, ou usuário informado não é aluno
+        '404':
+          description: Aluno não encontrado, ou nenhum período ativo
+    get:
+      tags: [Pontuacao]
+      summary: Histórico de lançamentos de um aluno (somente admin)
+      description: >
+        O admin confere antes de lançar de novo, para não premiar duas
+        vezes a mesma gincana.
+      parameters:
+        - name: aluno_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: periodo_id
+          in: query
+          description: Se omitido, usa o período atual
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lançamentos do aluno no período, mais recentes primeiro
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PontuacaoExtra'
+
+  /pontuacao-extra/{id}:
+    delete:
+      tags: [Pontuacao]
+      summary: Desfaz um lançamento de pontos (somente admin)
+      description: >
+        É o caminho para corrigir "lancei no aluno errado" sem deixar um
+        rastro confuso de mais e menos no histórico do aluno.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Lançamento removido
+        '404':
+          description: Lançamento não encontrado
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1057,6 +1172,26 @@ components:
           description: >
             Pontos que o evento vale para quem cumpre os critérios de
             presença (check-in + check-out + 75% de permanência).
+        capacidade:
+          type: integer
+          nullable: true
+          description: >
+            Total de vagas. `null` significa sem limite - e o que
+            descreve os eventos criados antes desta regra existir.
+        inscritos:
+          type: integer
+          description: >
+            Vagas ocupadas agora. Conta apenas inscricoes ATIVAS: quem
+            cancela devolve a vaga para a fila.
+        vagas_restantes:
+          type: integer
+          nullable: true
+          description: >
+            `null` quando nao ha limite. Vem calculado da API de
+            proposito - se cada tela fizesse a propria subtracao, uma
+            delas acabaria esquecendo do caso "sem limite".
+        lotado:
+          type: boolean
         palestrantes:
           type: array
           items:
@@ -1086,11 +1221,113 @@ components:
           format: date-time
         pontos:
           type: integer
+        capacidade:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: >
+            Numero de vagas. Omitir (ou enviar null) significa sem
+            limite. Ao ATUALIZAR um evento, um valor menor que o numero
+            de inscritos atuais e recusado com 422: nao existe tela para
+            o admin escolher a mao quem perde a vaga.
         palestrante_ids:
           type: array
           items:
             type: string
             format: uuid
+
+    NovaPontuacaoExtra:
+      type: object
+      required: [aluno_id, pontos, motivo]
+      properties:
+        aluno_id:
+          type: string
+          format: uuid
+        periodo_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Se omitido, usa o período vigente
+        pontos:
+          type: integer
+          description: >
+            Diferente de zero, no máximo 1000 em módulo. Negativo corrige
+            um lançamento a maior.
+        motivo:
+          type: string
+          maxLength: 200
+          description: >
+            Obrigatório. Sem ele ninguém consegue explicar depois de onde
+            vieram os pontos de um aluno no ranking - e fica visível para
+            o próprio aluno na tela de pontuação dele.
+
+    PontuacaoExtra:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        aluno_id:
+          type: string
+          format: uuid
+        aluno_nome:
+          type: string
+        periodo_id:
+          type: string
+          format: uuid
+        pontos:
+          type: integer
+        motivo:
+          type: string
+        criado_por_nome:
+          type: string
+          description: Qual admin lançou - sem isso não há como auditar um ranking contestado
+        criado_em:
+          type: string
+          format: date-time
+
+    Ranking:
+      type: object
+      properties:
+        periodo_id:
+          type: string
+          format: uuid
+        periodo_nome:
+          type: string
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankingItem'
+
+    RankingItem:
+      type: object
+      properties:
+        posicao:
+          type: integer
+          description: Empatados dividem a mesma posição (1, 2, 2, 4)
+        aluno_id:
+          type: string
+          format: uuid
+        aluno_nome:
+          type: string
+        aluno_rgm:
+          type: string
+          nullable: true
+          description: Preenchido apenas quando quem consulta é ADMIN
+        aluno_curso:
+          type: string
+          nullable: true
+        pontos_eventos:
+          type: integer
+        pontos_extras:
+          type: integer
+        pontos_total:
+          type: integer
+        eventos_concluidos:
+          type: integer
+          description: >
+            Quantas palestras o aluno de fato pontuou - separa quem tem
+            100 pontos de cinco palestras de quem tem 100 de uma gincana.
 
     Inscricao:
       type: object
@@ -1217,9 +1454,23 @@ components:
         pontos_total:
           type: integer
           description: >
+            O que vale no ranking: pontos_eventos + pontos_extras.
+        pontos_eventos:
+          type: integer
+          description: >
             Soma dos pontos dos eventos com status "concluido", já
             descontados os pontos perdidos nos eventos com status
             "no_show" (mesmo valor de pontos do evento perdido).
+        pontos_extras:
+          type: integer
+          description: Soma dos lancamentos manuais do admin (gincanas).
+        extras:
+          type: array
+          description: >
+            Lancamentos com motivo e autor. Vao para a tela do aluno de
+            proposito: sem eles, ele ve o total mudar sem saber por que.
+          items:
+            $ref: '#/components/schemas/PontuacaoExtra'
         eventos:
           type: array
           items:

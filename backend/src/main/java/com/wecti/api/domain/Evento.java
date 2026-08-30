@@ -62,6 +62,17 @@ public class Evento {
     private Integer pontos;
 
     /**
+     * Numero maximo de inscricoes ATIVAS. {@code null} significa sem
+     * limite - e o que descreve os eventos criados antes desta regra
+     * existir, e continua util para evento sem restricao de espaco.
+     *
+     * <p>So conta inscricao ativa: quem cancela devolve a vaga para a
+     * fila. Ver InscricaoService.inscrever.
+     */
+    @Column
+    private Integer capacidade;
+
+    /**
      * EAGER de proposito: o controller mapeia Evento -> EventoResponse
      * fora de uma transacao (open-in-view esta desligado), e @ManyToMany
      * e LAZY por padrao no Hibernate - acessar essa colecao depois que a

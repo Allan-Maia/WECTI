@@ -13,11 +13,13 @@ import MinhasInscricoesPage from './pages/aluno/MinhasInscricoesPage';
 import HistoricoPage from './pages/aluno/HistoricoPage';
 import CertificadosPage from './pages/aluno/CertificadosPage';
 import PontuacaoPage from './pages/aluno/PontuacaoPage';
+import RankingPage from './pages/aluno/RankingPage';
 import PerfilPage from './pages/aluno/PerfilPage';
 import CheckinConfirmarPage from './pages/aluno/CheckinConfirmarPage';
 import AdminEventosPage from './pages/admin/AdminEventosPage';
 import AdminUsuariosPage from './pages/admin/AdminUsuariosPage';
 import AdminCheckinPage from './pages/admin/AdminCheckinPage';
+import AdminRankingPage from './pages/admin/AdminRankingPage';
 import { homeDoPerfil } from './utils/rotas';
 import type { Perfil } from './types';
 
@@ -90,6 +92,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/ranking"
+        element={
+          <RotaPrivada perfis={['ALUNO']}>
+            <RankingPage />
+          </RotaPrivada>
+        }
+      />
+      <Route
         path="/perfil"
         element={
           <RotaPrivada>
@@ -120,6 +130,14 @@ function AppRoutes() {
         element={
           <RotaPrivada perfis={['ADMIN']}>
             <AdminUsuariosPage />
+          </RotaPrivada>
+        }
+      />
+      <Route
+        path="/admin/ranking"
+        element={
+          <RotaPrivada perfis={['ADMIN']}>
+            <AdminRankingPage />
           </RotaPrivada>
         }
       />

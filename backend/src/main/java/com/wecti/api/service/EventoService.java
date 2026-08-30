@@ -1,6 +1,7 @@
 package com.wecti.api.service;
 
 import com.wecti.api.domain.Evento;
+import com.wecti.api.dto.EventoResponse;
 import com.wecti.api.dto.NovoEventoRequest;
 import com.wecti.api.exception.CampoInvalidoException;
 import com.wecti.api.exception.RecursoNaoEncontradoException;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -24,13 +26,16 @@ public class EventoService {
     private final PeriodoRepository periodoRepository;
     private final PalestranteRepository palestranteRepository;
     private final InscricaoRepository inscricaoRepository;
+    private final InscricaoService inscricaoService;
 
     public EventoService(EventoRepository eventoRepository, PeriodoRepository periodoRepository,
-                          PalestranteRepository palestranteRepository, InscricaoRepository inscricaoRepository) {
+                          PalestranteRepository palestranteRepository, InscricaoRepository inscricaoRepository,
+                          InscricaoService inscricaoService) {
         this.eventoRepository = eventoRepository;
         this.periodoRepository = periodoRepository;
         this.palestranteRepository = palestranteRepository;
         this.inscricaoRepository = inscricaoRepository;
+        this.inscricaoService = inscricaoService;
     }
 
     public List<Evento> listar(UUID periodoId, String status) {
@@ -53,7 +58,26 @@ public class EventoService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Evento nao encontrado: " + id));
     }
 
-    public Evento criar(NovoEventoRequest request) {
+    /**
+     * Lista os eventos ja com a ocupacao de vagas preenchida. A contagem
+     * sai de uma consulta agrupada unica - contar evento a evento faria
+     * uma consulta por linha da tela.
+     */
+    public List<EventoResponse> listarComVagas(UUID periodoId, String status) {
+        List<Evento> eventos = listar(periodoId, status);
+        Map<UUID, Long> ocupacao = inscricaoService.inscritosAtivosPorEvento(
+                eventos.stream().map(Evento::getId).toList());
+        return eventos.stream()
+                .map(e -> EventoResponse.de(e, ocupacao.getOrDefault(e.getId(), 0L)))
+                .toList();
+    }
+
+    public EventoResponse detalharComVagas(UUID id) {
+        Evento evento = buscarPorId(id);
+        return EventoResponse.de(evento, inscricaoService.inscritosAtivos(id));
+    }
+
+    public EventoResponse criar(NovoEventoRequest request) {
         validarDatas(request);
         Evento evento = Evento.builder()
                 .periodo(buscarPeriodoPelaData(request.dataHoraInicio()))
@@ -63,14 +87,18 @@ public class EventoService {
                 .dataHoraInicio(request.dataHoraInicio())
                 .dataHoraFim(request.dataHoraFim())
                 .pontos(request.pontos())
+                .capacidade(request.capacidade())
                 .palestrantes(buscarPalestrantes(request.palestranteIds()))
                 .build();
-        return eventoRepository.save(evento);
+        return EventoResponse.de(eventoRepository.save(evento), 0L);
     }
 
-    public Evento atualizar(UUID id, NovoEventoRequest request) {
+    public EventoResponse atualizar(UUID id, NovoEventoRequest request) {
         validarDatas(request);
         Evento evento = buscarPorId(id);
+        long inscritos = inscricaoService.inscritosAtivos(id);
+        validarCapacidade(request.capacidade(), inscritos);
+
         evento.setPeriodo(buscarPeriodoPelaData(request.dataHoraInicio()));
         evento.setTitulo(request.titulo());
         evento.setDescricao(request.descricao());
@@ -78,8 +106,22 @@ public class EventoService {
         evento.setDataHoraInicio(request.dataHoraInicio());
         evento.setDataHoraFim(request.dataHoraFim());
         evento.setPontos(request.pontos());
+        evento.setCapacidade(request.capacidade());
         evento.setPalestrantes(buscarPalestrantes(request.palestranteIds()));
-        return eventoRepository.save(evento);
+        return EventoResponse.de(eventoRepository.save(evento), inscritos);
+    }
+
+    /**
+     * Reduzir a capacidade abaixo de quem ja esta inscrito deixaria o
+     * evento num estado impossivel de resolver pelo sistema: o admin
+     * teria que escolher a mao quem perde a vaga, e nao ha tela para
+     * isso. Melhor recusar e deixar claro quantos ja entraram.
+     */
+    private void validarCapacidade(Integer capacidade, long inscritos) {
+        if (capacidade != null && capacidade < inscritos) {
+            throw new RegraNegocioException(
+                    "Este evento ja tem " + inscritos + " inscrito(s) - a capacidade nao pode ser menor que isso.");
+        }
     }
 
     public void cancelar(UUID id) {

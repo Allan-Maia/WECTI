@@ -45,9 +45,18 @@
     </div>
     <ul class="nav-links" id="navLinks">
       <li><a href="#home">Home</a></li>
-      <li><a href="#sobre">Sobre</a></li>
+      <li><a href="#palestrantes">Palestrantes</a></li>
       <li><a href="#galeria">Galeria</a></li>
-      <li><a href="#contato" class="nav-cta">Contato</a></li>
+      <li><a href="#sobre">Sobre</a></li>
+      <li><a href="#contato">Contato</a></li>
+      <!--
+        Entrada para o sistema. Os dois caminhos que um aluno pode
+        precisar: quem nunca entrou cria a conta, quem ja tem faz login.
+        As rotas /cadastro e /login sao do app React (ver App.tsx); o
+        .htaccess entrega o index.html do app para elas.
+      -->
+      <li class="nav-acesso"><a href="/cadastro" class="nav-ghost">Primeiro acesso</a></li>
+      <li class="nav-acesso"><a href="/login" class="nav-cta">Login</a></li>
     </ul>
     <div class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -169,6 +178,60 @@
           <div class="stat-value">500+</div>
           <div class="stat-label">Projetos inscritos</div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PALESTRANTES ── -->
+  <!--
+    Conteudo fixo, direto no HTML: sao quatro nomes definidos para esta
+    edicao, nao dados que mudam sozinhos. A foto leva para a pagina do
+    palestrante (palestrantes/*.html), com a biografia completa.
+  -->
+  <section id="palestrantes">
+    <div class="container">
+      <div class="palestrantes-header">
+        <p class="section-label">6ª Edição · 2026</p>
+        <h2 class="section-title">Palestrantes</h2>
+        <p class="section-desc" style="margin:0 auto;">
+          Quem vem falar na WECTI 2026. Clique em um palestrante para ver a biografia completa.
+        </p>
+      </div>
+
+      <div class="palestrantes-grid">
+
+        <a class="palestrante-card" href="palestrantes/patricia-papa.html">
+          <img class="palestrante-foto" src="fotos/patricia-papa.jpg"
+               alt="Patricia Papa" width="140" height="140" loading="lazy" />
+          <h3 class="palestrante-nome">Patricia Papa</h3>
+          <p class="palestrante-tema">Vibe Coding</p>
+          <p class="palestrante-quando">28/09 · 8h30 · Auditório</p>
+        </a>
+
+        <a class="palestrante-card" href="palestrantes/deborah-vasconcellos.html">
+          <img class="palestrante-foto" src="fotos/deborah-vasconcellos.jpg"
+               alt="Deborah Vasconcellos" width="140" height="140" loading="lazy" />
+          <h3 class="palestrante-nome">Deborah Vasconcellos</h3>
+          <p class="palestrante-tema">Dados e IA com SAS: Seu Passaporte para as Profissões do Futuro</p>
+          <p class="palestrante-quando">28/09 · 9h30 · Auditório</p>
+        </a>
+
+        <a class="palestrante-card" href="palestrantes/cleorbete-santos.html">
+          <img class="palestrante-foto" src="fotos/cleorbete-santos.jpg"
+               alt="Cleórbete Santos" width="140" height="140" loading="lazy" />
+          <h3 class="palestrante-nome">Cleórbete Santos</h3>
+          <p class="palestrante-tema">IA aplicada ao Desenvolvimento Seguro de Software</p>
+          <p class="palestrante-quando">28/09 · 19h30 · Auditório</p>
+        </a>
+
+        <a class="palestrante-card" href="palestrantes/daniela-macieira.html">
+          <img class="palestrante-foto" src="fotos/daniela-macieira.jpg"
+               alt="Daniela Macieira" width="140" height="140" loading="lazy" />
+          <h3 class="palestrante-nome">Daniela Macieira</h3>
+          <p class="palestrante-tema">Você conhece a casa da Internet?</p>
+          <p class="palestrante-quando">29/09 · 8h30 · Auditório</p>
+        </a>
+
       </div>
     </div>
   </section>

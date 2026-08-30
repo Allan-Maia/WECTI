@@ -10,6 +10,38 @@ interface Props {
   acao?: ReactNode;
 }
 
+/**
+ * Ocupação das vagas. Evento sem limite não mostra nada - "23 inscritos"
+ * sozinho não ajuda o aluno a decidir e só polui o card.
+ *
+ * Fica em destaque quando aperta (últimas vagas ou lotado), porque é
+ * exatamente aí que a informação muda o comportamento de quem lê.
+ */
+function VagasDoEvento({ evento }: { evento: Evento }) {
+  if (evento.capacidade == null || evento.vagas_restantes == null) return null;
+
+  const restantes = evento.vagas_restantes;
+  const cor = restantes === 0 ? 'text-red-400' : restantes <= 10 ? 'text-amber-400' : 'text-text-muted';
+
+  return (
+    <span className={`flex items-center gap-2 ${cor}`}>
+      <span aria-hidden>🎟️</span>
+      {restantes === 0 ? (
+        <span className="font-medium">Vagas esgotadas ({evento.capacidade} lugares)</span>
+      ) : (
+        <>
+          <span className={restantes <= 10 ? 'font-medium' : ''}>
+            {restantes} {restantes === 1 ? 'vaga restante' : 'vagas restantes'}
+          </span>
+          <span className="text-text-muted/70">
+            de {evento.capacidade}
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export default function EventoCard({ evento, acao }: Props) {
   return (
     <div className="group flex flex-col gap-3 rounded-card border border-border bg-surface p-5 transition-colors duration-200 hover:border-accent">
@@ -38,6 +70,7 @@ export default function EventoCard({ evento, acao }: Props) {
             <span aria-hidden>🎤</span> {evento.palestrantes.map((p) => p.nome).join(', ')}
           </span>
         )}
+        <VagasDoEvento evento={evento} />
       </div>
 
       {acao && <div className="mt-2 flex gap-2">{acao}</div>}

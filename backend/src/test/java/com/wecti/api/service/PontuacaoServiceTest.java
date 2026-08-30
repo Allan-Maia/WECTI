@@ -9,7 +9,6 @@ import com.wecti.api.domain.Usuario;
 import com.wecti.api.repository.CheckinRepository;
 import com.wecti.api.repository.EventoRepository;
 import com.wecti.api.repository.InscricaoRepository;
-import com.wecti.api.repository.PeriodoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,10 +47,11 @@ class PontuacaoServiceTest {
     private static final UUID ALUNO_ID = UUID.randomUUID();
     private static final int PONTOS_DO_EVENTO = 100;
 
-    @Mock private PeriodoRepository periodoRepository;
     @Mock private EventoRepository eventoRepository;
     @Mock private InscricaoRepository inscricaoRepository;
     @Mock private CheckinRepository checkinRepository;
+    @Mock private PontuacaoExtraService pontuacaoExtraService;
+    @Mock private PeriodoService periodoService;
 
     @InjectMocks private PontuacaoService pontuacaoService;
 
@@ -65,7 +65,10 @@ class PontuacaoServiceTest {
                 .dataInicio(LocalDate.now().minusMonths(1))
                 .dataFim(LocalDate.now().plusMonths(3))
                 .build();
-        when(periodoRepository.findById(periodo.getId())).thenReturn(Optional.of(periodo));
+        when(periodoService.resolver(periodo.getId())).thenReturn(periodo);
+        // Sem pontos de gincana nos cenarios deste teste: aqui a conta
+        // sob exame e a das palestras. Os extras tem teste proprio.
+        when(pontuacaoExtraService.listar(any(), any())).thenReturn(List.of());
     }
 
     /** Evento de 2h que ja terminou ontem. */

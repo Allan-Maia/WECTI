@@ -24,8 +24,11 @@ export default function EventosPage() {
     setInscrevendoId(eventoId);
     try {
       await inscreverEmEvento(eventoId);
-      notificarSucesso('Inscrição realizada! O QR code foi enviado por email.');
+      notificarSucesso('Inscrição realizada! Sua presença é confirmada no dia, lendo o QR code do evento.');
       recarregarInscricoes();
+      // Recarrega os eventos também: a vaga que o aluno acabou de ocupar
+      // precisa sumir do contador antes que ele (ou outro) olhe de novo.
+      recarregar();
     } catch (erroInscricao) {
       notificarErro(extrairMensagemErro(erroInscricao, 'Não foi possível se inscrever.'));
     } finally {
@@ -50,6 +53,13 @@ export default function EventosPage() {
                 jaInscrito(evento.id) ? (
                   <Button variante="outline" disabled className="w-full">
                     Inscrito
+                  </Button>
+                ) : evento.lotado ? (
+                  // Continua visível, e não escondido: o aluno precisa
+                  // saber que o evento existe e encheu - some da tela e
+                  // ele acha que houve erro.
+                  <Button variante="outline" disabled className="w-full">
+                    Vagas esgotadas
                   </Button>
                 ) : (
                   <Button

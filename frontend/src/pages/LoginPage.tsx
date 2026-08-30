@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useLocation, useNavigate, type Location } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, type Location } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Button from '../components/Button';
 import FormField from '../components/FormField';
@@ -18,7 +18,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
-  const { entrar } = useAuth();
+  const { entrar, autenticado, perfil } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [erroGeral, setErroGeral] = useState<string | null>(null);
@@ -48,6 +48,17 @@ export default function LoginPage() {
       setEnviando(false);
     }
   };
+
+  // A landing publica e a porta de entrada do site, e o botao "Login"
+  // dela aponta para ca sem saber se a pessoa ja esta logada. Sem isto,
+  // quem ja tem sessao ativa cairia num formulario de login pedindo a
+  // senha de novo, sem motivo.
+  //
+  // Depois dos hooks de proposito: sair antes mudaria a quantidade de
+  // hooks executados entre um render e outro, que e erro em React.
+  if (autenticado) {
+    return <Navigate to={homeDoPerfil(perfil)} replace />;
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-4">

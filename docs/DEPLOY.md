@@ -110,15 +110,16 @@ antes**, porque uma delas apaga uma coluna.
 2. cPanel → **phpMyAdmin** → selecionar o banco → aba **SQL** → colar o
    conteúdo de `docs/verificar-banco.sql` e executar. Ele mostra em que
    versão o schema está e se alguma migration falhou.
-3. Comparar com o que o sistema espera hoje: **versão 5**.
+3. Comparar com o que o sistema espera hoje: **versão 6**.
 
 | Última versão no banco | O que o Flyway vai aplicar sozinho |
 |---|---|
-| 1 | V2, V3, V4 e V5 |
-| 2 | V3, V4 e V5 |
-| 3 | V4 e V5 |
-| 4 | Só a V5 |
-| 5 | Nada — já está atualizado |
+| 1 | V2, V3, V4, V5 e V6 |
+| 2 | V3, V4, V5 e V6 |
+| 3 | V4, V5 e V6 |
+| 4 | V5 e V6 |
+| 5 | Só a V6 |
+| 6 | Nada — já está atualizado |
 
 O que cada uma faz:
 
@@ -131,6 +132,9 @@ O que cada uma faz:
 - **V5** — adiciona `segredo` em `sessoes_checkin`, usado pelo código
   rotativo do QR de check-in. Sessões antigas ganham um segredo aleatório
   próprio.
+- **V6** — adiciona `capacidade` em eventos (nulo = sem limite de vagas) e
+  cria a tabela `pontuacoes_extras`, dos pontos de gincana lançados pelo
+  admin. Nada é apagado.
 
 > Se a consulta 2 do arquivo retornar alguma linha (`success = 0`), **não
 > suba a aplicação**: há uma migration que falhou no meio e o banco está
@@ -238,6 +242,20 @@ então não dá para contorná-lo trocando de rota.
 
 ## 4. Frontend
 
+O `dist/` gerado aqui contém **as duas partes do site**:
+
+| No `dist/` | O que é | Endereço no ar |
+|---|---|---|
+| `home.html` | Landing pública do evento (palestrantes, galeria, sobre) | `/` — é a página inicial |
+| `index.html` + `assets/` | O sistema em React (login, eventos, check-in, certificados) | `/login`, `/eventos`, `/checkin/...` |
+| `palestrantes/*.html` | Uma página por palestrante | `/palestrantes/patricia-papa.html` |
+| `fotos/` | Fotos da galeria e dos palestrantes | — |
+| `.htaccess` | Faz `/` cair na landing e as rotas do React caírem no `index.html` | — |
+
+Quem abre o domínio vê a landing; os botões **Primeiro acesso** e
+**Login** no topo levam para o sistema. É o `.htaccess` que amarra isso —
+sem ele, `/` abriria o sistema direto e as rotas do React dariam 404.
+
 Antes de gerar o build, apontar `frontend/.env.production` para o
 endereço **HTTPS** da API:
 
@@ -264,11 +282,12 @@ npm run build
    npm ci
    npm run build
    ```
-3. Confira que o `.htaccess` foi junto:
+3. Confira que está tudo no `dist/`:
    ```bash
    ls -a dist/
    ```
-   Tem que aparecer `.htaccess`, `index.html` e `assets/`.
+   Tem que aparecer `.htaccess`, `index.html`, `home.html`, `assets/`,
+   `palestrantes/` e `fotos/`.
 4. Compacte o **conteúdo** de `dist/`, não a pasta. Ao abrir o zip você
    deve ver `index.html` na raiz — se vir uma pasta `dist` dentro, o site
    fica em `/dist/` e não funciona.
@@ -289,7 +308,8 @@ npm run build
    `backup-site-antigo.zip` (fica guardado), depois apagar os originais.
 8. **Upload** do zip → voltar para `public_html` → botão direito no zip →
    **Extract** → apagar o zip depois.
-9. Conferir que `public_html` tem: `index.html`, `assets/` e **`.htaccess`**.
+9. Conferir que `public_html` tem: `index.html`, `home.html`, `assets/`,
+   `palestrantes/`, `fotos/` e **`.htaccess`**.
    Se o `.htaccess` não estiver lá:
    - **+ File** → nome `.htaccess` → **Create New File**
    - botão direito nele → **Edit** → colar o conteúdo de
@@ -508,7 +528,12 @@ reconstruídos.
 
 ## 8. Conferir depois de subir
 
-- [ ] `https://jadir9152.c44.integrator.host` abre com cadeado fechado
+- [ ] `https://jadir9152.c44.integrator.host` abre a **landing do evento**
+      (não a tela de login) e com cadeado fechado
+- [ ] Os botões **Primeiro acesso** e **Login** no topo da landing levam
+      para o sistema
+- [ ] A seção Palestrantes aparece e clicar numa foto abre a página do
+      palestrante
 - [ ] `http://jadir9152.c44.integrator.host` redireciona sozinho para HTTPS
 - [ ] Login funciona pelo site (se falhar com "verifique seus dados" mas
       funcionar via `curl`, o problema é `CORS_ALLOWED_ORIGINS`)

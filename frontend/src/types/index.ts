@@ -66,6 +66,14 @@ export interface Evento {
   data_hora_inicio: string;
   data_hora_fim: string;
   pontos: number;
+  /** Total de vagas. `null` = sem limite. */
+  capacidade: number | null;
+  /** Vagas ocupadas agora - só inscrições ativas. */
+  inscritos: number;
+  /** `null` quando não há limite. Vem calculado da API para que nenhuma
+   *  tela precise lembrar do caso "sem limite" na hora de subtrair. */
+  vagas_restantes: number | null;
+  lotado: boolean;
   palestrantes: Palestrante[];
 }
 
@@ -78,6 +86,8 @@ export interface NovoEvento {
   data_hora_inicio: string;
   data_hora_fim: string;
   pontos: number;
+  /** `null` = sem limite de vagas. */
+  capacidade?: number | null;
   palestrante_ids?: string[];
 }
 
@@ -149,11 +159,47 @@ export interface EventoPontuacaoItem {
   status: EventoPontuacaoStatus;
 }
 
+/** Pontos lançados à mão pelo admin - prêmio de gincana, tipicamente. */
+export interface PontuacaoExtra {
+  id: string;
+  aluno_id: string;
+  aluno_nome: string;
+  periodo_id: string;
+  pontos: number;
+  motivo: string;
+  criado_por_nome: string;
+  criado_em: string;
+}
+
 export interface PontuacaoPeriodo {
   periodo_id: string;
   periodo_nome: string;
+  /** O que vale no ranking: eventos + extras. */
   pontos_total: number;
+  pontos_eventos: number;
+  pontos_extras: number;
   eventos: EventoPontuacaoItem[];
+  extras: PontuacaoExtra[];
+}
+
+export interface RankingItem {
+  /** Empatados dividem a mesma posição (1, 2, 2, 4). */
+  posicao: number;
+  aluno_id: string;
+  aluno_nome: string;
+  /** Só vem preenchido para o ADMIN - o aluno não vê o RGM dos colegas. */
+  aluno_rgm: string | null;
+  aluno_curso: string | null;
+  pontos_eventos: number;
+  pontos_extras: number;
+  pontos_total: number;
+  eventos_concluidos: number;
+}
+
+export interface Ranking {
+  periodo_id: string;
+  periodo_nome: string;
+  itens: RankingItem[];
 }
 
 export interface LoginRequest {

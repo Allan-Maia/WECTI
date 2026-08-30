@@ -2,18 +2,16 @@ package com.wecti.api.service;
 
 import com.wecti.api.domain.Evento;
 import com.wecti.api.domain.Inscricao;
-import com.wecti.api.domain.InscricaoStatus;
 import com.wecti.api.domain.Periodo;
+import com.wecti.api.domain.PontuacaoExtra;
 import com.wecti.api.dto.EventoPontuacaoItemResponse;
+import com.wecti.api.dto.PontuacaoExtraResponse;
 import com.wecti.api.dto.PontuacaoPeriodoResponse;
-import com.wecti.api.exception.RecursoNaoEncontradoException;
 import com.wecti.api.repository.CheckinRepository;
 import com.wecti.api.repository.EventoRepository;
 import com.wecti.api.repository.InscricaoRepository;
-import com.wecti.api.repository.PeriodoRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,30 +23,38 @@ import java.util.UUID;
  * resultado ja reflete no-shows de eventos encerrados mesmo antes do job
  * agendado (NoShowSchedulerJob) rodar; o job serve apenas para registrar
  * a penalizacao no log no momento em que o evento termina.
+ *
+ * <p>O total soma duas parcelas: os eventos (regra em
+ * {@link CalculoPontuacaoEvento}) e os pontos extras lancados pelo admin
+ * ({@link PontuacaoExtraService}). As duas aparecem separadas na resposta
+ * porque o aluno precisa conseguir explicar o proprio numero.
  */
 @Service
 public class PontuacaoService {
 
-    private final PeriodoRepository periodoRepository;
     private final EventoRepository eventoRepository;
     private final InscricaoRepository inscricaoRepository;
     private final CheckinRepository checkinRepository;
+    private final PontuacaoExtraService pontuacaoExtraService;
+    private final PeriodoService periodoService;
 
-    public PontuacaoService(PeriodoRepository periodoRepository, EventoRepository eventoRepository,
-                             InscricaoRepository inscricaoRepository, CheckinRepository checkinRepository) {
-        this.periodoRepository = periodoRepository;
+    public PontuacaoService(EventoRepository eventoRepository, InscricaoRepository inscricaoRepository,
+                             CheckinRepository checkinRepository, PontuacaoExtraService pontuacaoExtraService,
+                             PeriodoService periodoService) {
         this.eventoRepository = eventoRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.checkinRepository = checkinRepository;
+        this.pontuacaoExtraService = pontuacaoExtraService;
+        this.periodoService = periodoService;
     }
 
     public PontuacaoPeriodoResponse calcular(UUID alunoId, UUID periodoId) {
-        Periodo periodo = periodoId != null ? buscarPeriodo(periodoId) : periodoAtual();
+        Periodo periodo = periodoService.resolver(periodoId);
 
         List<Evento> eventos = eventoRepository.findByPeriodoId(periodo.getId());
         List<EventoPontuacaoItemResponse> itens = new ArrayList<>();
         LocalDateTime agora = LocalDateTime.now();
-        int total = 0;
+        int pontosEventos = 0;
 
         for (Evento evento : eventos) {
             var inscricaoOpt = inscricaoRepository.findByAlunoIdAndEventoId(alunoId, evento.getId());
@@ -56,43 +62,27 @@ public class PontuacaoService {
                 continue;
             }
             Inscricao inscricao = inscricaoOpt.get();
+            var checkin = checkinRepository.findByInscricaoId(inscricao.getId()).orElse(null);
 
-            if (inscricao.getStatus() == InscricaoStatus.CANCELADA) {
-                itens.add(new EventoPontuacaoItemResponse(evento.getId(), evento.getTitulo(), 0, "cancelado"));
+            var resultado = CalculoPontuacaoEvento.avaliar(evento, inscricao, checkin, agora);
+            if (resultado == null) {
                 continue;
             }
-
-            if (evento.getDataHoraFim().isAfter(agora)) {
-                continue;
-            }
-
-            var checkin = checkinRepository.findByInscricaoId(inscricao.getId());
-            if (checkin.isEmpty()) {
-                itens.add(new EventoPontuacaoItemResponse(evento.getId(), evento.getTitulo(),
-                        -evento.getPontos(), "no_show"));
-                total -= evento.getPontos();
-            } else if (checkin.get().isPresencaQualificada(evento.getDataHoraInicio(), evento.getDataHoraFim())) {
-                itens.add(new EventoPontuacaoItemResponse(evento.getId(), evento.getTitulo(),
-                        evento.getPontos(), "concluido"));
-                total += evento.getPontos();
-            } else {
-                itens.add(new EventoPontuacaoItemResponse(evento.getId(), evento.getTitulo(), 0, "concluido"));
-            }
+            itens.add(new EventoPontuacaoItemResponse(evento.getId(), evento.getTitulo(),
+                    resultado.pontos(), resultado.status()));
+            pontosEventos += resultado.pontos();
         }
 
-        return new PontuacaoPeriodoResponse(periodo.getId(), periodo.getNome(), total, itens);
-    }
+        List<PontuacaoExtra> extras = pontuacaoExtraService.listar(alunoId, periodo.getId());
+        int pontosExtras = extras.stream().mapToInt(PontuacaoExtra::getPontos).sum();
 
-    private Periodo buscarPeriodo(UUID periodoId) {
-        return periodoRepository.findById(periodoId)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Periodo nao encontrado: " + periodoId));
-    }
-
-    private Periodo periodoAtual() {
-        LocalDate hoje = LocalDate.now();
-        return periodoRepository.findAll().stream()
-                .filter(p -> !hoje.isBefore(p.getDataInicio()) && !hoje.isAfter(p.getDataFim()))
-                .findFirst()
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Nenhum periodo ativo no momento"));
+        return new PontuacaoPeriodoResponse(
+                periodo.getId(),
+                periodo.getNome(),
+                pontosEventos + pontosExtras,
+                pontosEventos,
+                pontosExtras,
+                itens,
+                extras.stream().map(PontuacaoExtraResponse::de).toList());
     }
 }

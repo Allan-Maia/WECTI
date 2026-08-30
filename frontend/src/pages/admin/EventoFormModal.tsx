@@ -28,6 +28,17 @@ function construirSchema(valorOriginalInicio: string | undefined) {
       data_hora_inicio: z.string().min(1, 'Informe a data de início'),
       data_hora_fim: z.string().min(1, 'Informe a data de término'),
       pontos: z.coerce.number().int('Deve ser um número inteiro').min(0, 'Não pode ser negativo'),
+      // Vazio = sem limite de vagas. Precisa passar por string primeiro
+      // porque um <input type="number"> em branco chega como '', e
+      // z.coerce.number() transformaria isso em 0 - ou seja, um evento
+      // com zero vagas, que ninguém conseguiria acessar.
+      capacidade: z
+        .string()
+        .optional()
+        .transform((valor) => (valor == null || valor.trim() === '' ? null : Number(valor)))
+        .refine((valor) => valor === null || (Number.isInteger(valor) && valor >= 1), {
+          message: 'Informe pelo menos 1 vaga, ou deixe em branco para ilimitado.',
+        }),
     })
     .refine(
       (dados) =>
@@ -79,8 +90,9 @@ export default function EventoFormModal({ evento, onSalvar, onFechar }: Props) {
           data_hora_inicio: paraInputDateTime(evento.data_hora_inicio),
           data_hora_fim: paraInputDateTime(evento.data_hora_fim),
           pontos: evento.pontos,
+          capacidade: evento.capacidade == null ? '' : String(evento.capacidade),
         }
-      : { pontos: 0 },
+      : { pontos: 0, capacidade: '' },
   });
 
   const alternarPalestrante = (id: string) => {
@@ -128,7 +140,25 @@ export default function EventoFormModal({ evento, onSalvar, onFechar }: Props) {
           />
         </div>
 
-        <FormField label="Pontos" type="number" min={0} erro={errors.pontos?.message} registro={register('pontos')} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Pontos" type="number" min={0} erro={errors.pontos?.message} registro={register('pontos')} />
+          <FormField
+            label="Vagas"
+            type="number"
+            min={1}
+            placeholder="Sem limite"
+            erro={errors.capacidade?.message}
+            registro={register('capacidade')}
+          />
+        </div>
+        <p className="-mt-2 text-xs text-text-muted">
+          Deixe as vagas em branco para não limitar as inscrições. Quem cancela devolve a vaga para os outros
+          alunos.
+          {evento && evento.inscritos > 0 && (
+            <> Este evento já tem <span className="font-medium text-text">{evento.inscritos} inscrito(s)</span>,
+            então a capacidade não pode ser menor que isso.</>
+          )}
+        </p>
 
         {palestrantes.length > 0 && (
           <div>

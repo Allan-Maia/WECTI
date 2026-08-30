@@ -4,6 +4,7 @@ import { LoadingBlock } from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import EmptyState from '../../components/EmptyState';
 import { usePontuacao } from '../../hooks/usePontuacao';
+import { formatarDataHora } from '../../utils/data';
 
 export default function PontuacaoPage() {
   const { pontuacao, carregando, erro, semPeriodoAtivo, recarregar } = usePontuacao();
@@ -24,6 +25,15 @@ export default function PontuacaoPage() {
           <div className="rounded-card border border-border bg-surface p-8 text-center">
             <p className="text-5xl font-extrabold text-accent">{pontuacao.pontos_total}</p>
             <p className="mt-1 text-sm text-text-muted">pontos acumulados</p>
+            {/* A quebra só aparece quando há gincana: sem ela, "120 de
+                palestras + 0 de gincanas" é ruído. */}
+            {pontuacao.pontos_extras !== 0 && (
+              <p className="mt-3 text-sm text-text-muted">
+                <span className="font-medium text-text">{pontuacao.pontos_eventos}</span> de palestras
+                {' + '}
+                <span className="font-medium text-text">{pontuacao.pontos_extras}</span> de gincanas
+              </p>
+            )}
           </div>
 
           {pontuacao.eventos.length === 0 ? (
@@ -56,6 +66,35 @@ export default function PontuacaoPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {pontuacao.extras.length > 0 && (
+            <div className="rounded-card border border-border bg-surface">
+              <div className="border-b border-border px-5 py-4">
+                <h2 className="text-base font-semibold text-text">Pontos de gincana</h2>
+                <p className="text-sm text-text-muted">
+                  Lançados pela organização durante as palestras.
+                </p>
+              </div>
+              <ul>
+                {pontuacao.extras.map((extra) => (
+                  <li
+                    key={extra.id}
+                    className="flex items-start justify-between gap-4 border-b border-border px-5 py-3 last:border-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm text-text">{extra.motivo}</p>
+                      <p className="text-xs text-text-muted">{formatarDataHora(extra.criado_em)}</p>
+                    </div>
+                    <span
+                      className={`shrink-0 font-semibold ${extra.pontos < 0 ? 'text-red-400' : 'text-accent'}`}
+                    >
+                      {extra.pontos > 0 ? `+${extra.pontos}` : extra.pontos}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

@@ -32,23 +32,22 @@ public class EventoController {
     @GetMapping
     public List<EventoResponse> listar(@RequestParam(required = false, name = "periodo_id") UUID periodoId,
                                         @RequestParam(required = false) String status) {
-        return eventoService.listar(periodoId, status).stream().map(EventoResponse::de).toList();
+        return eventoService.listarComVagas(periodoId, status);
     }
 
     @GetMapping("/{eventoId}")
     public EventoResponse detalhar(@PathVariable UUID eventoId) {
-        return EventoResponse.de(eventoService.buscarPorId(eventoId));
+        return eventoService.detalharComVagas(eventoId);
     }
 
     @PostMapping
     public ResponseEntity<EventoResponse> criar(@Valid @RequestBody NovoEventoRequest request) {
-        var evento = eventoService.criar(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(EventoResponse.de(evento));
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventoService.criar(request));
     }
 
     @PutMapping("/{eventoId}")
     public EventoResponse atualizar(@PathVariable UUID eventoId, @Valid @RequestBody NovoEventoRequest request) {
-        return EventoResponse.de(eventoService.atualizar(eventoId, request));
+        return eventoService.atualizar(eventoId, request);
     }
 
     @DeleteMapping("/{eventoId}")

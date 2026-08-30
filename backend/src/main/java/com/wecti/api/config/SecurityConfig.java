@@ -129,6 +129,13 @@ public class SecurityConfig {
                         .requestMatchers("/me/pontuacao").hasRole("ALUNO")
                         .requestMatchers("/pontuacao/aluno/*/periodo/*").hasRole("ADMIN")
 
+                        // Ranking: os dois perfis veem, mas o conteudo muda -
+                        // o RGM dos colegas so vai para o admin. Quem decide e
+                        // o perfil do token, dentro do RankingController.
+                        .requestMatchers(HttpMethod.GET, "/ranking").authenticated()
+                        // Lancamento manual de pontos (gincana) - so admin.
+                        .requestMatchers("/pontuacao-extra", "/pontuacao-extra/*").hasRole("ADMIN")
+
                         .requestMatchers("/inscricoes/*/certificado").hasRole("ALUNO")
                         .requestMatchers(HttpMethod.DELETE, "/inscricoes/*").hasRole("ALUNO")
                         .requestMatchers(HttpMethod.GET, "/inscricoes/*").authenticated()
