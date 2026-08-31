@@ -30,9 +30,8 @@ public class EventoController {
     }
 
     @GetMapping
-    public List<EventoResponse> listar(@RequestParam(required = false, name = "periodo_id") UUID periodoId,
-                                        @RequestParam(required = false) String status) {
-        return eventoService.listarComVagas(periodoId, status);
+    public List<EventoResponse> listar(@RequestParam(required = false) String status) {
+        return eventoService.listarComVagas(status);
     }
 
     @GetMapping("/{eventoId}")

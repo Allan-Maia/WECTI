@@ -1,36 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
-import axios from 'axios';
 import { buscarMinhaPontuacao } from '../services/pontuacao';
 import { extrairMensagemErro } from '../services/api';
-import type { PontuacaoPeriodo } from '../types';
+import type { Pontuacao } from '../types';
 
-export function usePontuacao(periodoId?: string) {
-  const [pontuacao, setPontuacao] = useState<PontuacaoPeriodo | null>(null);
+/**
+ * Pontuação do aluno logado.
+ *
+ * Antes este hook tinha um estado extra, `semPeriodoAtivo`, para tratar o
+ * 404 de "nenhum período ativo" como situação normal em vez de erro. Esse
+ * caso deixou de existir junto com o conceito de período: a pontuação
+ * agora é simplesmente a do aluno no WECTI, e a API sempre responde -
+ * mesmo que com zero pontos.
+ */
+export function usePontuacao() {
+  const [pontuacao, setPontuacao] = useState<Pontuacao | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  // 404 aqui normalmente significa "nao ha periodo ativo cadastrado ainda" -
-  // um estado normal, nao uma falha real (ver PontuacaoPage/HistoricoPage).
-  const [semPeriodoAtivo, setSemPeriodoAtivo] = useState(false);
 
   const recarregar = useCallback(() => {
     setCarregando(true);
     setErro(null);
-    setSemPeriodoAtivo(false);
-    buscarMinhaPontuacao(periodoId)
+    buscarMinhaPontuacao()
       .then(setPontuacao)
-      .catch((e) => {
-        if (axios.isAxiosError(e) && e.response?.status === 404) {
-          setSemPeriodoAtivo(true);
-          return;
-        }
-        setErro(extrairMensagemErro(e, 'Nao foi possivel carregar a pontuacao.'));
-      })
+      .catch((e) => setErro(extrairMensagemErro(e, 'Nao foi possivel carregar a pontuacao.')))
       .finally(() => setCarregando(false));
-  }, [periodoId]);
+  }, []);
 
   useEffect(() => {
     recarregar();
   }, [recarregar]);
 
-  return { pontuacao, carregando, erro, semPeriodoAtivo, recarregar };
+  return { pontuacao, carregando, erro, recarregar };
 }

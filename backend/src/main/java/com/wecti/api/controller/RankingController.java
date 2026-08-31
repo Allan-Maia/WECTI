@@ -6,14 +6,11 @@ import com.wecti.api.security.AuthenticatedUser;
 import com.wecti.api.service.RankingService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
-
 /**
- * Classificação por pontos no período. Uma rota só para os dois perfis:
- * a diferença é o que volta em cada uma.
+ * Classificação por pontos. Uma rota só para os dois perfis: a
+ * diferença é o que volta em cada uma.
  *
  * <p>O RGM só é incluído para o admin, que precisa dele para não lançar
  * pontos no aluno errado. Para o aluno, o ranking mostra nome e curso —
@@ -31,8 +28,7 @@ public class RankingController {
     }
 
     @GetMapping("/ranking")
-    public RankingResponse ranking(@AuthenticationPrincipal AuthenticatedUser autenticado,
-                                    @RequestParam(required = false, name = "periodo_id") UUID periodoId) {
-        return rankingService.montar(periodoId, autenticado.perfil() == Perfil.ADMIN);
+    public RankingResponse ranking(@AuthenticationPrincipal AuthenticatedUser autenticado) {
+        return rankingService.montar(autenticado.perfil() == Perfil.ADMIN);
     }
 }

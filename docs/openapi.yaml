@@ -7,8 +7,11 @@
 #   - Certificado exige check-in + check-out + permanencia >= 75% da duracao
 #     do evento (calculada a partir de data_hora_inicio/data_hora_fim).
 #   - Pontos do evento sao definidos no proprio cadastro do evento.
-#   - Pontuacao e acumulada dentro do periodo (semestre) e reinicia a cada
-#     novo periodo cadastrado.
+#   - Nao ha recorte por semestre: a pontuacao e a do aluno no WECTI,
+#     somando todas as palestras mais os pontos de gincana. A entidade
+#     Periodo foi removida (migration V7) - nunca foi validada com o
+#     professor e fazia as telas de pontuacao e ranking pararem de
+#     carregar quando o semestre cadastrado terminava.
 #   - Perfis: admin, aluno (sem perfil "operador" nem "professor" -
 #     confirmado com o stakeholder do projeto).
 #   - Nao ha app Android dedicado: o admin gera o QR code de
@@ -46,8 +49,6 @@ tags:
   - name: Auth
     description: Login dos perfis ativos (admin, aluno)
   - name: Usuarios
-  - name: Periodos
-    description: Semestres - controlam a janela de acumulo de pontuação
   - name: Palestrantes
   - name: Eventos
   - name: Inscricoes
@@ -321,39 +322,6 @@ paths:
                 $ref: '#/components/schemas/Usuario'
 
   # ---------------------------------------------------------------------
-  # Periodos
-  # ---------------------------------------------------------------------
-  /periodos:
-    get:
-      tags: [Periodos]
-      summary: Lista os períodos (semestres) cadastrados
-      responses:
-        '200':
-          description: Lista de períodos
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Periodo'
-    post:
-      tags: [Periodos]
-      summary: Cria um novo período (somente admin)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NovoPeriodo'
-      responses:
-        '201':
-          description: Período criado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Periodo'
-
-  # ---------------------------------------------------------------------
   # Palestrantes
   # ---------------------------------------------------------------------
   /palestrantes:
@@ -394,11 +362,6 @@ paths:
       tags: [Eventos]
       summary: Lista eventos
       parameters:
-        - name: periodo_id
-          in: query
-          schema:
-            type: string
-            format: uuid
         - name: status
           in: query
           description: Filtra por eventos futuros ou já encerrados
@@ -848,22 +811,15 @@ paths:
     get:
       tags: [Pontuacao]
       summary: Pontuação do aluno autenticado
-      parameters:
-        - name: periodo_id
-          in: query
-          description: Se omitido, retorna o período atual
-          schema:
-            type: string
-            format: uuid
       responses:
         '200':
-          description: Resumo de pontuação do período
+          description: Pontuação do aluno
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PontuacaoPeriodo'
+                $ref: '#/components/schemas/Pontuacao'
 
-  /pontuacao/aluno/{alunoId}/periodo/{periodoId}:
+  /pontuacao/aluno/{alunoId}:
     parameters:
       - name: alunoId
         in: path
@@ -871,26 +827,19 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: periodoId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
     get:
       tags: [Pontuacao]
-      summary: Pontuação de um aluno especifico em um período (somente admin)
+      summary: Pontuação de um aluno específico (somente admin)
       description: >
-        Adicionado para o painel de admin consultar a
-        pontuação de qualquer aluno, sem depender do token do proprio
-        aluno usado em /me/pontuacao.
+        Para o painel de admin consultar a pontuação de qualquer aluno,
+        sem depender do token do próprio aluno usado em /me/pontuacao.
       responses:
         '200':
-          description: Resumo de pontuação do período
+          description: Pontuação do aluno
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PontuacaoPeriodo'
+                $ref: '#/components/schemas/Pontuacao'
 
   # ---------------------------------------------------------------------
   # Ranking e pontos extras (gincanas)
@@ -909,14 +858,7 @@ paths:
 
         Alunos empatados dividem a mesma posição, e a posição seguinte
         pula (1, 2, 2, 4). Entram na lista todos os alunos com alguma
-        inscrição no período, mais os que receberam pontos extras.
-      parameters:
-        - name: periodo_id
-          in: query
-          description: Se omitido, usa o período atual
-          schema:
-            type: string
-            format: uuid
+        inscrição, mais os que receberam pontos extras.
       responses:
         '200':
           description: Classificação do período
@@ -968,12 +910,6 @@ paths:
         - name: aluno_id
           in: query
           required: true
-          schema:
-            type: string
-            format: uuid
-        - name: periodo_id
-          in: query
-          description: Se omitido, usa o período atual
           schema:
             type: string
             format: uuid
@@ -1094,35 +1030,6 @@ components:
           nullable: true
           description: Opcional, só informativo (ver descrição em Usuario.curso).
 
-    Periodo:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        nome:
-          type: string
-          example: "2026.1"
-        data_inicio:
-          type: string
-          format: date
-        data_fim:
-          type: string
-          format: date
-
-    NovoPeriodo:
-      type: object
-      required: [nome, data_inicio, data_fim]
-      properties:
-        nome:
-          type: string
-        data_inicio:
-          type: string
-          format: date
-        data_fim:
-          type: string
-          format: date
-
     Palestrante:
       type: object
       properties:
@@ -1153,12 +1060,6 @@ components:
           type: string
         descricao:
           type: string
-        periodo_id:
-          type: string
-          format: uuid
-          description: >
-            Preenchido automaticamente pelo backend a partir da data do
-            evento (ver NovoEvento) - nunca informado pelo cliente.
         local:
           type: string
         data_hora_inicio:
@@ -1201,11 +1102,9 @@ components:
       type: object
       required: [titulo, data_hora_inicio, data_hora_fim, pontos]
       description: >
-        Sem periodo_id de proposito: o formulario ja pede data/hora do
-        evento, entao o backend descobre sozinho em qual Periodo
-        (semestre) cadastrado essa data cai (ver EventoService) - se
-        nenhum Periodo cobrir a data, a criacao falha com 422 pedindo
-        pra cadastrar um Periodo pra ela antes (POST /periodos).
+        O evento nao pertence a nenhum agrupamento por semestre: a
+        entidade Periodo foi removida do sistema (migration V7). Data,
+        hora e pontos do proprio evento sao tudo o que ele precisa.
       properties:
         titulo:
           type: string
@@ -1243,11 +1142,6 @@ components:
         aluno_id:
           type: string
           format: uuid
-        periodo_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Se omitido, usa o período vigente
         pontos:
           type: integer
           description: >
@@ -1272,9 +1166,6 @@ components:
           format: uuid
         aluno_nome:
           type: string
-        periodo_id:
-          type: string
-          format: uuid
         pontos:
           type: integer
         motivo:
@@ -1289,11 +1180,6 @@ components:
     Ranking:
       type: object
       properties:
-        periodo_id:
-          type: string
-          format: uuid
-        periodo_nome:
-          type: string
         itens:
           type: array
           items:
@@ -1443,14 +1329,12 @@ components:
           description: Parâmetro `c` da URL lida do QR code.
           example: a3f19c2d4b
 
-    PontuacaoPeriodo:
+    Pontuacao:
       type: object
+      description: >
+        Pontuacao do aluno no WECTI. Sem recorte por semestre - ver a nota
+        sobre a remocao de Periodo no cabecalho deste arquivo.
       properties:
-        periodo_id:
-          type: string
-          format: uuid
-        periodo_nome:
-          type: string
         pontos_total:
           type: integer
           description: >

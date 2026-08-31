@@ -38,8 +38,9 @@ public interface InscricaoRepository extends JpaRepository<Inscricao, UUID> {
     List<Object[]> contarPorEvento(@Param("eventoIds") Collection<UUID> eventoIds,
                                     @Param("status") InscricaoStatus status);
 
-    /** Todas as inscricoes dos eventos de um periodo - usado pelo
-     *  ranking, que precisa da turma inteira de uma vez. */
-    @Query("select i from Inscricao i where i.evento.periodo.id = :periodoId")
-    List<Inscricao> findByPeriodoId(@Param("periodoId") UUID periodoId);
+    /** Todas as inscricoes, com aluno e evento ja carregados - o ranking
+     *  precisa da turma inteira de uma vez, e sem o fetch faria uma
+     *  consulta por linha para montar cada nome. */
+    @Query("select i from Inscricao i join fetch i.aluno join fetch i.evento")
+    List<Inscricao> findTodasParaRanking();
 }

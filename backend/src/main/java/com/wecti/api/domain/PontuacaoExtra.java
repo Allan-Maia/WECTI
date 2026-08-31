@@ -21,9 +21,10 @@ import java.util.UUID;
  * Pontos lancados a mao pelo admin - tipicamente premio de gincana feita
  * durante uma palestra.
  *
- * <p>Nao substituem a pontuacao das palestras: somam-se a ela dentro do
- * mesmo periodo. Por isso ficam presos a um {@link Periodo}, igual ao
- * resto da pontuacao, e nao a um saldo unico do aluno.
+ * <p>Nao substituem a pontuacao das palestras: somam-se a ela. Ficam
+ * numa tabela propria, e nao numa coluna de saldo no usuario, porque a
+ * pontuacao do sistema inteiro e calculada a cada consulta - um saldo
+ * aqui seria a unica excecao e sairia de sincronia.
  *
  * <p>Cada lancamento guarda quem lancou e por que. Num ranking que vai
  * definir premiados no fim do WECTI, "de onde vieram esses 50 pontos" e
@@ -44,10 +45,6 @@ public class PontuacaoExtra {
     @ManyToOne(optional = false)
     @JoinColumn(name = "aluno_id", nullable = false)
     private Usuario aluno;
-
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "periodo_id", nullable = false)
-    private Periodo periodo;
 
     /** Pode ser negativo - e como o admin corrige um lancamento a maior
      *  sem apagar o historico. */

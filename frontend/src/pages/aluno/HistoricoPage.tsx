@@ -6,21 +6,14 @@ import EmptyState from '../../components/EmptyState';
 import { usePontuacao } from '../../hooks/usePontuacao';
 
 export default function HistoricoPage() {
-  const { pontuacao, carregando, erro, semPeriodoAtivo, recarregar } = usePontuacao();
+  const { pontuacao, carregando, erro, recarregar } = usePontuacao();
 
   return (
-    <PageContainer titulo="Histórico" descricao="Eventos já encerrados no período atual">
+    <PageContainer titulo="Histórico" descricao="Palestras que você já participou">
       {carregando && <LoadingBlock mensagem="Carregando histórico..." />}
       {!carregando && erro && <ErrorMessage mensagem={erro} onTentarNovamente={recarregar} />}
-      {!carregando && !erro && semPeriodoAtivo && (
-        <EmptyState
-          titulo="Nenhum período ativo"
-          descricao="Ainda não há um período (semestre) cadastrado para a data de hoje."
-          icone="🗓️"
-        />
-      )}
       {!carregando && !erro && pontuacao && pontuacao.eventos.length === 0 && (
-        <EmptyState titulo="Nenhum evento no histórico" descricao="Ainda não há eventos encerrados no período atual." icone="🕘" />
+        <EmptyState titulo="Nenhum evento no histórico" descricao="Você ainda não participou de nenhuma palestra encerrada." icone="🕘" />
       )}
       {!carregando && !erro && pontuacao && pontuacao.eventos.length > 0 && (
         <div className="overflow-x-auto rounded-card border border-border bg-surface">

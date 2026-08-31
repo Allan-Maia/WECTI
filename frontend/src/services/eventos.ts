@@ -2,7 +2,6 @@ import api from './api';
 import type { Evento, NovoEvento } from '../types';
 
 export interface FiltroEventos {
-  periodo_id?: string;
   status?: 'futuros' | 'encerrados';
 }
 

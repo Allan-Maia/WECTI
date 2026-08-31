@@ -114,9 +114,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/usuarios/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/usuarios/me").authenticated()
 
-                        .requestMatchers(HttpMethod.POST, "/periodos").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/periodos").authenticated()
-
                         .requestMatchers(HttpMethod.POST, "/palestrantes").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/palestrantes").authenticated()
 
@@ -127,7 +124,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/me/inscricoes").hasRole("ALUNO")
                         .requestMatchers("/me/pontuacao").hasRole("ALUNO")
-                        .requestMatchers("/pontuacao/aluno/*/periodo/*").hasRole("ADMIN")
+                        .requestMatchers("/pontuacao/aluno/*").hasRole("ADMIN")
 
                         // Ranking: os dois perfis veem, mas o conteudo muda -
                         // o RGM dos colegas so vai para o admin. Quem decide e

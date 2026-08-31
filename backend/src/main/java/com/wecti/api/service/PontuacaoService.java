@@ -2,11 +2,10 @@ package com.wecti.api.service;
 
 import com.wecti.api.domain.Evento;
 import com.wecti.api.domain.Inscricao;
-import com.wecti.api.domain.Periodo;
 import com.wecti.api.domain.PontuacaoExtra;
 import com.wecti.api.dto.EventoPontuacaoItemResponse;
 import com.wecti.api.dto.PontuacaoExtraResponse;
-import com.wecti.api.dto.PontuacaoPeriodoResponse;
+import com.wecti.api.dto.PontuacaoResponse;
 import com.wecti.api.repository.CheckinRepository;
 import com.wecti.api.repository.EventoRepository;
 import com.wecti.api.repository.InscricaoRepository;
@@ -28,6 +27,13 @@ import java.util.UUID;
  * {@link CalculoPontuacaoEvento}) e os pontos extras lancados pelo admin
  * ({@link PontuacaoExtraService}). As duas aparecem separadas na resposta
  * porque o aluno precisa conseguir explicar o proprio numero.
+ *
+ * <p><b>Sem recorte por semestre.</b> A pontuacao e do aluno no WECTI,
+ * ponto. O conceito de "periodo" foi removido: nunca foi validado com o
+ * professor ("nao precisa relacionar com nada"), e obrigava toda consulta
+ * a encontrar um periodo que contivesse a data de hoje - o que fazia a
+ * tela de pontuacao parar de carregar assim que o semestre cadastrado
+ * terminava.
  */
 @Service
 public class PontuacaoService {
@@ -36,22 +42,17 @@ public class PontuacaoService {
     private final InscricaoRepository inscricaoRepository;
     private final CheckinRepository checkinRepository;
     private final PontuacaoExtraService pontuacaoExtraService;
-    private final PeriodoService periodoService;
 
     public PontuacaoService(EventoRepository eventoRepository, InscricaoRepository inscricaoRepository,
-                             CheckinRepository checkinRepository, PontuacaoExtraService pontuacaoExtraService,
-                             PeriodoService periodoService) {
+                             CheckinRepository checkinRepository, PontuacaoExtraService pontuacaoExtraService) {
         this.eventoRepository = eventoRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.checkinRepository = checkinRepository;
         this.pontuacaoExtraService = pontuacaoExtraService;
-        this.periodoService = periodoService;
     }
 
-    public PontuacaoPeriodoResponse calcular(UUID alunoId, UUID periodoId) {
-        Periodo periodo = periodoService.resolver(periodoId);
-
-        List<Evento> eventos = eventoRepository.findByPeriodoId(periodo.getId());
+    public PontuacaoResponse calcular(UUID alunoId) {
+        List<Evento> eventos = eventoRepository.findAll();
         List<EventoPontuacaoItemResponse> itens = new ArrayList<>();
         LocalDateTime agora = LocalDateTime.now();
         int pontosEventos = 0;
@@ -73,12 +74,10 @@ public class PontuacaoService {
             pontosEventos += resultado.pontos();
         }
 
-        List<PontuacaoExtra> extras = pontuacaoExtraService.listar(alunoId, periodo.getId());
+        List<PontuacaoExtra> extras = pontuacaoExtraService.listar(alunoId);
         int pontosExtras = extras.stream().mapToInt(PontuacaoExtra::getPontos).sum();
 
-        return new PontuacaoPeriodoResponse(
-                periodo.getId(),
-                periodo.getNome(),
+        return new PontuacaoResponse(
                 pontosEventos + pontosExtras,
                 pontosEventos,
                 pontosExtras,

@@ -16,8 +16,8 @@ public interface CheckinRepository extends JpaRepository<Checkin, UUID> {
      *  check-in nesse evento, mais cedo primeiro. */
     List<Checkin> findByInscricao_Evento_IdOrderByEntradaAsc(UUID eventoId);
 
-    /** Todos os check-ins do período, numa consulta só - o ranking
-     *  precisa da turma inteira e não pode buscar inscrição a inscrição. */
-    @Query("select c from Checkin c where c.inscricao.evento.periodo.id = :periodoId")
-    List<Checkin> findByPeriodoId(@Param("periodoId") UUID periodoId);
+    /** Todos os check-ins, numa consulta só - o ranking precisa da turma
+     *  inteira e não pode buscar inscrição a inscrição. */
+    @Query("select c from Checkin c join fetch c.inscricao")
+    List<Checkin> findTodosParaRanking();
 }

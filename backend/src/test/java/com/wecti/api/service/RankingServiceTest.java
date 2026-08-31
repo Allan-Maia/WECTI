@@ -4,7 +4,6 @@ import com.wecti.api.domain.Checkin;
 import com.wecti.api.domain.Evento;
 import com.wecti.api.domain.Inscricao;
 import com.wecti.api.domain.InscricaoStatus;
-import com.wecti.api.domain.Periodo;
 import com.wecti.api.domain.Usuario;
 import com.wecti.api.dto.RankingItemResponse;
 import com.wecti.api.repository.CheckinRepository;
@@ -21,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 /**
- * Ranking do periodo.
+ * Ranking do WECTI.
  *
  * <p>O ponto critico coberto aqui e a <b>concordancia com a tela
  * individual</b>: os dois usam {@link CalculoPontuacaoEvento}, e um aluno
@@ -49,40 +47,29 @@ class RankingServiceTest {
     @Mock private InscricaoRepository inscricaoRepository;
     @Mock private CheckinRepository checkinRepository;
     @Mock private PontuacaoExtraService pontuacaoExtraService;
-    @Mock private PeriodoService periodoService;
     @Mock private UsuarioRepository usuarioRepository;
 
     @InjectMocks private RankingService rankingService;
 
-    private Periodo periodo;
     private Evento eventoEncerrado;
     private final List<Inscricao> inscricoes = new ArrayList<>();
     private final List<Checkin> checkins = new ArrayList<>();
 
     @BeforeEach
     void preparar() {
-        periodo = Periodo.builder()
-                .id(UUID.randomUUID())
-                .nome("2026.2")
-                .dataInicio(LocalDate.now().minusMonths(1))
-                .dataFim(LocalDate.now().plusMonths(3))
-                .build();
-
         LocalDateTime inicio = LocalDateTime.now().minusDays(2);
         eventoEncerrado = Evento.builder()
                 .id(UUID.randomUUID())
-                .periodo(periodo)
                 .titulo("Palestra encerrada")
                 .dataHoraInicio(inicio)
                 .dataHoraFim(inicio.plusHours(2))
                 .pontos(100)
                 .build();
 
-        when(periodoService.resolver(null)).thenReturn(periodo);
-        when(eventoRepository.findByPeriodoId(periodo.getId())).thenReturn(List.of(eventoEncerrado));
-        when(inscricaoRepository.findByPeriodoId(periodo.getId())).thenReturn(inscricoes);
-        when(checkinRepository.findByPeriodoId(periodo.getId())).thenReturn(checkins);
-        when(pontuacaoExtraService.totaisDoPeriodo(periodo.getId())).thenReturn(Map.of());
+        when(eventoRepository.findAll()).thenReturn(List.of(eventoEncerrado));
+        when(inscricaoRepository.findTodasParaRanking()).thenReturn(inscricoes);
+        when(checkinRepository.findTodosParaRanking()).thenReturn(checkins);
+        when(pontuacaoExtraService.totaisPorAluno()).thenReturn(Map.of());
     }
 
     private Usuario aluno(String nome, String rgm) {
@@ -119,7 +106,7 @@ class RankingServiceTest {
         Usuario faltou = aluno("Ana", "22222222");
         inscrever(faltou, InscricaoStatus.ATIVA);
 
-        var ranking = rankingService.montar(null, false);
+        var ranking = rankingService.montar(false);
 
         assertThat(ranking.itens()).extracting(RankingItemResponse::alunoNome)
                 .containsExactly(comPresenca.getNome(), faltou.getNome());
@@ -138,7 +125,7 @@ class RankingServiceTest {
         Usuario ultimo = aluno("Daniel", "44444444");
         inscrever(ultimo, InscricaoStatus.CANCELADA);
 
-        var ranking = rankingService.montar(null, false);
+        var ranking = rankingService.montar(false);
 
         assertThat(ranking.itens()).extracting(RankingItemResponse::posicao)
                 .containsExactly(1, 1, 1, 4);
@@ -148,9 +135,9 @@ class RankingServiceTest {
     @DisplayName("soma os pontos de gincana ao total")
     void somaPontosExtras() {
         Usuario aluno = presencaCompleta("Ana", "11111111");
-        when(pontuacaoExtraService.totaisDoPeriodo(periodo.getId())).thenReturn(Map.of(aluno.getId(), 50));
+        when(pontuacaoExtraService.totaisPorAluno()).thenReturn(Map.of(aluno.getId(), 50));
 
-        var item = rankingService.montar(null, false).itens().get(0);
+        var item = rankingService.montar(false).itens().get(0);
 
         assertThat(item.pontosEventos()).isEqualTo(100);
         assertThat(item.pontosExtras()).isEqualTo(50);
@@ -163,10 +150,9 @@ class RankingServiceTest {
         Usuario semGincana = presencaCompleta("Ana", "11111111");
         Usuario comGincana = aluno("Bruno", "22222222");
         inscrever(comGincana, InscricaoStatus.CANCELADA);
-        when(pontuacaoExtraService.totaisDoPeriodo(periodo.getId()))
-                .thenReturn(Map.of(comGincana.getId(), 500));
+        when(pontuacaoExtraService.totaisPorAluno()).thenReturn(Map.of(comGincana.getId(), 500));
 
-        var ranking = rankingService.montar(null, false);
+        var ranking = rankingService.montar(false);
 
         assertThat(ranking.itens().get(0).alunoNome()).isEqualTo(comGincana.getNome());
         assertThat(ranking.itens().get(1).alunoNome()).isEqualTo(semGincana.getNome());
@@ -176,10 +162,10 @@ class RankingServiceTest {
     @DisplayName("aluno que so tem pontos de gincana, sem inscricao, entra no ranking")
     void alunoSoComGincanaAparece() {
         Usuario premiado = aluno("Fora da lista", "99999999");
-        when(pontuacaoExtraService.totaisDoPeriodo(periodo.getId())).thenReturn(Map.of(premiado.getId(), 30));
+        when(pontuacaoExtraService.totaisPorAluno()).thenReturn(Map.of(premiado.getId(), 30));
         when(usuarioRepository.findAllById(List.of(premiado.getId()))).thenReturn(List.of(premiado));
 
-        var ranking = rankingService.montar(null, false);
+        var ranking = rankingService.montar(false);
 
         assertThat(ranking.itens()).singleElement()
                 .as("sumir de um ranking em que voce tem pontos e o pior erro possivel aqui")
@@ -194,8 +180,8 @@ class RankingServiceTest {
     void rgmSoParaAdmin() {
         presencaCompleta("Ana", "12345678");
 
-        assertThat(rankingService.montar(null, true).itens().get(0).alunoRgm()).isEqualTo("12345678");
-        assertThat(rankingService.montar(null, false).itens().get(0).alunoRgm())
+        assertThat(rankingService.montar(true).itens().get(0).alunoRgm()).isEqualTo("12345678");
+        assertThat(rankingService.montar(false).itens().get(0).alunoRgm())
                 .as("o ranking do aluno e aberto para a turma inteira - nao espalha o RGM dos colegas")
                 .isNull();
     }
@@ -205,13 +191,12 @@ class RankingServiceTest {
     void eventoEmAndamentoNaoConta() {
         Evento emAndamento = Evento.builder()
                 .id(UUID.randomUUID())
-                .periodo(periodo)
                 .titulo("Acontecendo agora")
                 .dataHoraInicio(LocalDateTime.now().minusMinutes(30))
                 .dataHoraFim(LocalDateTime.now().plusHours(1))
                 .pontos(100)
                 .build();
-        when(eventoRepository.findByPeriodoId(periodo.getId())).thenReturn(List.of(emAndamento));
+        when(eventoRepository.findAll()).thenReturn(List.of(emAndamento));
 
         Usuario aluno = aluno("Ana", "11111111");
         inscricoes.add(Inscricao.builder()
@@ -221,7 +206,7 @@ class RankingServiceTest {
                 .status(InscricaoStatus.ATIVA)
                 .build());
 
-        var item = rankingService.montar(null, false).itens().get(0);
+        var item = rankingService.montar(false).itens().get(0);
 
         assertThat(item.pontosTotal())
                 .as("o aluno ainda pode aparecer - penalizar antes do fim seria injusto")
@@ -233,7 +218,7 @@ class RankingServiceTest {
     void contaEventosConcluidos() {
         presencaCompleta("Ana", "11111111");
 
-        var item = rankingService.montar(null, false).itens().get(0);
+        var item = rankingService.montar(false).itens().get(0);
 
         assertThat(item.eventosConcluidos()).isEqualTo(1);
     }
@@ -250,7 +235,7 @@ class RankingServiceTest {
                 .saida(eventoEncerrado.getDataHoraInicio().plusMinutes(30))
                 .build());
 
-        var item = rankingService.montar(null, false).itens().get(0);
+        var item = rankingService.montar(false).itens().get(0);
 
         assertThat(item.pontosTotal()).isZero();
         assertThat(item.eventosConcluidos()).isZero();
@@ -262,6 +247,6 @@ class RankingServiceTest {
         Usuario aluno = aluno("Ana", "11111111");
         inscrever(aluno, InscricaoStatus.CANCELADA);
 
-        assertThat(rankingService.montar(null, false).itens().get(0).pontosTotal()).isZero();
+        assertThat(rankingService.montar(false).itens().get(0).pontosTotal()).isZero();
     }
 }

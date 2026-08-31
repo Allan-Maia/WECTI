@@ -44,7 +44,7 @@ export default function RankingPage() {
   return (
     <PageContainer
       titulo="Ranking"
-      descricao={ranking ? `Classificação do período ${ranking.periodo_nome}` : 'Classificação por pontos'}
+      descricao="Classificação dos alunos por pontos no WECTI"
     >
       {carregando && <LoadingBlock mensagem="Carregando ranking..." />}
       {!carregando && erro && <ErrorMessage mensagem={erro} onTentarNovamente={carregar} />}

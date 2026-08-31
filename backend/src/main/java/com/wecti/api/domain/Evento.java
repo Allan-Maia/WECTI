@@ -33,10 +33,6 @@ public class Evento {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "periodo_id", nullable = false)
-    private Periodo periodo;
-
     @Column(nullable = false, length = 200)
     private String titulo;
 

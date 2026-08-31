@@ -46,9 +46,8 @@ public class PontuacaoExtraController {
     /** Histórico de um aluno - o admin confere antes de lançar de novo,
      *  para não premiar duas vezes a mesma gincana. */
     @GetMapping
-    public List<PontuacaoExtraResponse> listar(@RequestParam(name = "aluno_id") UUID alunoId,
-                                                @RequestParam(required = false, name = "periodo_id") UUID periodoId) {
-        return service.listar(alunoId, periodoId).stream().map(PontuacaoExtraResponse::de).toList();
+    public List<PontuacaoExtraResponse> listar(@RequestParam(name = "aluno_id") UUID alunoId) {
+        return service.listar(alunoId).stream().map(PontuacaoExtraResponse::de).toList();
     }
 
     @DeleteMapping("/{id}")

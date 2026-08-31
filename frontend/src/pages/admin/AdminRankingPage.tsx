@@ -55,11 +55,7 @@ export default function AdminRankingPage() {
   return (
     <PageContainer
       titulo="Ranking"
-      descricao={
-        ranking
-          ? `Classificação do período ${ranking.periodo_nome} - lance aqui os pontos de gincana`
-          : 'Classificação por pontos'
-      }
+      descricao="Classificação dos alunos por pontos - lance aqui os pontos de gincana"
     >
       {carregando && <LoadingBlock mensagem="Carregando ranking..." />}
       {!carregando && erro && <ErrorMessage mensagem={erro} onTentarNovamente={carregar} />}

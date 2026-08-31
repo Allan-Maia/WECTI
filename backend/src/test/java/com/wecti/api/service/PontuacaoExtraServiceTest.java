@@ -1,7 +1,6 @@
 package com.wecti.api.service;
 
 import com.wecti.api.domain.Perfil;
-import com.wecti.api.domain.Periodo;
 import com.wecti.api.domain.PontuacaoExtra;
 import com.wecti.api.domain.Usuario;
 import com.wecti.api.dto.NovaPontuacaoExtraRequest;
@@ -18,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,32 +44,22 @@ class PontuacaoExtraServiceTest {
 
     @Mock private PontuacaoExtraRepository repository;
     @Mock private UsuarioRepository usuarioRepository;
-    @Mock private PeriodoService periodoService;
 
     @InjectMocks private PontuacaoExtraService service;
 
     private Usuario aluno;
-    private Periodo periodo;
 
     @BeforeEach
     void preparar() {
         aluno = Usuario.builder().id(UUID.randomUUID()).nome("Ana").perfil(Perfil.ALUNO).rgm("12345678").build();
-        periodo = Periodo.builder()
-                .id(UUID.randomUUID())
-                .nome("2026.2")
-                .dataInicio(LocalDate.now().minusMonths(1))
-                .dataFim(LocalDate.now().plusMonths(3))
-                .build();
-
         when(usuarioRepository.findById(aluno.getId())).thenReturn(Optional.of(aluno));
         when(usuarioRepository.findById(ADMIN_ID)).thenReturn(Optional.of(
                 Usuario.builder().id(ADMIN_ID).nome("Admin").perfil(Perfil.ADMIN).build()));
-        when(periodoService.resolver(any())).thenReturn(periodo);
         when(repository.save(any(PontuacaoExtra.class))).thenAnswer(i -> i.getArgument(0));
     }
 
     private NovaPontuacaoExtraRequest pedido(int pontos, String motivo) {
-        return new NovaPontuacaoExtraRequest(aluno.getId(), null, pontos, motivo);
+        return new NovaPontuacaoExtraRequest(aluno.getId(), pontos, motivo);
     }
 
     @Test
@@ -82,7 +70,6 @@ class PontuacaoExtraServiceTest {
         assertThat(extra.getPontos()).isEqualTo(50);
         assertThat(extra.getMotivo()).isEqualTo("1o lugar na gincana de logica");
         assertThat(extra.getAluno()).isEqualTo(aluno);
-        assertThat(extra.getPeriodo()).isEqualTo(periodo);
         assertThat(extra.getCriadoPor().getId())
                 .as("ranking contestado sem autoria do lancamento e impossivel de auditar")
                 .isEqualTo(ADMIN_ID);
@@ -129,7 +116,7 @@ class PontuacaoExtraServiceTest {
         when(usuarioRepository.findById(outroAdmin.getId())).thenReturn(Optional.of(outroAdmin));
 
         assertThatThrownBy(() -> service.lancar(
-                new NovaPontuacaoExtraRequest(outroAdmin.getId(), null, 50, "Gincana"), ADMIN_ID))
+                new NovaPontuacaoExtraRequest(outroAdmin.getId(), 50, "Gincana"), ADMIN_ID))
                 .as("admin nao disputa ranking - lancar pontos nele so criaria confusao na apuracao")
                 .isInstanceOf(CampoInvalidoException.class);
     }
@@ -138,13 +125,13 @@ class PontuacaoExtraServiceTest {
     @DisplayName("soma os lancamentos por aluno para o ranking")
     void somaPorAluno() {
         UUID outroAluno = UUID.randomUUID();
-        when(repository.findByPeriodoId(periodo.getId())).thenReturn(List.of(
+        when(repository.findTodosParaRanking()).thenReturn(List.of(
                 extraDe(aluno.getId(), 50),
                 extraDe(aluno.getId(), 30),
                 extraDe(aluno.getId(), -10),
                 extraDe(outroAluno, 100)));
 
-        var totais = service.totaisDoPeriodo(periodo.getId());
+        var totais = service.totaisPorAluno();
 
         assertThat(totais).containsEntry(aluno.getId(), 70).containsEntry(outroAluno, 100);
     }
@@ -153,7 +140,6 @@ class PontuacaoExtraServiceTest {
         return PontuacaoExtra.builder()
                 .id(UUID.randomUUID())
                 .aluno(Usuario.builder().id(alunoId).build())
-                .periodo(periodo)
                 .pontos(pontos)
                 .motivo("Gincana")
                 .build();

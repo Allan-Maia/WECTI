@@ -4,7 +4,6 @@ import com.wecti.api.domain.Checkin;
 import com.wecti.api.domain.Evento;
 import com.wecti.api.domain.Inscricao;
 import com.wecti.api.domain.InscricaoStatus;
-import com.wecti.api.domain.Periodo;
 import com.wecti.api.domain.Usuario;
 import com.wecti.api.repository.CheckinRepository;
 import com.wecti.api.repository.EventoRepository;
@@ -19,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * Pontuacao do aluno no periodo. Nao ha tabela de saldo: o valor e
+ * Pontuacao do aluno. Nao ha tabela de saldo: o valor e
  * recalculado a cada consulta a partir de Inscricao/Checkin/Evento, entao
  * estes testes cobrem a regra inteira, nao um cache.
  *
@@ -51,24 +49,14 @@ class PontuacaoServiceTest {
     @Mock private InscricaoRepository inscricaoRepository;
     @Mock private CheckinRepository checkinRepository;
     @Mock private PontuacaoExtraService pontuacaoExtraService;
-    @Mock private PeriodoService periodoService;
 
     @InjectMocks private PontuacaoService pontuacaoService;
 
-    private Periodo periodo;
-
     @BeforeEach
     void preparar() {
-        periodo = Periodo.builder()
-                .id(UUID.randomUUID())
-                .nome("2026.2")
-                .dataInicio(LocalDate.now().minusMonths(1))
-                .dataFim(LocalDate.now().plusMonths(3))
-                .build();
-        when(periodoService.resolver(periodo.getId())).thenReturn(periodo);
         // Sem pontos de gincana nos cenarios deste teste: aqui a conta
         // sob exame e a das palestras. Os extras tem teste proprio.
-        when(pontuacaoExtraService.listar(any(), any())).thenReturn(List.of());
+        when(pontuacaoExtraService.listar(any())).thenReturn(List.of());
     }
 
     /** Evento de 2h que ja terminou ontem. */
@@ -76,8 +64,7 @@ class PontuacaoServiceTest {
         LocalDateTime inicio = LocalDateTime.now().minusDays(1).withHour(19).withMinute(0);
         return Evento.builder()
                 .id(UUID.randomUUID())
-                .periodo(periodo)
-                .titulo("Palestra de teste")
+                                .titulo("Palestra de teste")
                 .dataHoraInicio(inicio)
                 .dataHoraFim(inicio.plusHours(2))
                 .pontos(PONTOS_DO_EVENTO)
@@ -94,7 +81,7 @@ class PontuacaoServiceTest {
     }
 
     private void cenario(Evento evento, Inscricao inscricao, Checkin checkin) {
-        when(eventoRepository.findByPeriodoId(periodo.getId())).thenReturn(List.of(evento));
+        when(eventoRepository.findAll()).thenReturn(List.of(evento));
         when(inscricaoRepository.findByAlunoIdAndEventoId(ALUNO_ID, evento.getId()))
                 .thenReturn(Optional.ofNullable(inscricao));
         when(checkinRepository.findByInscricaoId(any())).thenReturn(Optional.ofNullable(checkin));
@@ -112,7 +99,7 @@ class PontuacaoServiceTest {
                 .build();
         cenario(evento, inscricao, checkin);
 
-        var resultado = pontuacaoService.calcular(ALUNO_ID, periodo.getId());
+        var resultado = pontuacaoService.calcular(ALUNO_ID);
 
         assertThat(resultado.pontosTotal()).isEqualTo(PONTOS_DO_EVENTO);
         assertThat(resultado.eventos()).singleElement()
@@ -134,7 +121,7 @@ class PontuacaoServiceTest {
                 .build();
         cenario(evento, inscricao, checkin);
 
-        var resultado = pontuacaoService.calcular(ALUNO_ID, periodo.getId());
+        var resultado = pontuacaoService.calcular(ALUNO_ID);
 
         assertThat(resultado.pontosTotal()).isZero();
         assertThat(resultado.eventos()).singleElement()
@@ -153,7 +140,7 @@ class PontuacaoServiceTest {
                 .build();
         cenario(evento, inscricao, checkin);
 
-        var resultado = pontuacaoService.calcular(ALUNO_ID, periodo.getId());
+        var resultado = pontuacaoService.calcular(ALUNO_ID);
 
         assertThat(resultado.pontosTotal()).isZero();
     }
@@ -165,7 +152,7 @@ class PontuacaoServiceTest {
         Inscricao inscricao = inscricao(evento, InscricaoStatus.ATIVA);
         cenario(evento, inscricao, null);
 
-        var resultado = pontuacaoService.calcular(ALUNO_ID, periodo.getId());
+        var resultado = pontuacaoService.calcular(ALUNO_ID);
 
         assertThat(resultado.pontosTotal())
                 .as("a penalidade e exatamente o valor que o evento valeria")
@@ -181,7 +168,7 @@ class PontuacaoServiceTest {
         Inscricao inscricao = inscricao(evento, InscricaoStatus.CANCELADA);
         cenario(evento, inscricao, null);
 
-        var resultado = pontuacaoService.calcular(ALUNO_ID, periodo.getId());
+        var resultado = pontuacaoService.calcular(ALUNO_ID);
 
         assertThat(resultado.pontosTotal())
                 .as("cancelar e diferente de faltar - nao pode virar no-show")
@@ -195,13 +182,13 @@ class PontuacaoServiceTest {
     void eventoFuturoNaoConta() {
         LocalDateTime inicio = LocalDateTime.now().plusDays(3);
         Evento evento = Evento.builder()
-                .id(UUID.randomUUID()).periodo(periodo).titulo("Ainda vai acontecer")
+                .id(UUID.randomUUID()).titulo("Ainda vai acontecer")
                 .dataHoraInicio(inicio).dataHoraFim(inicio.plusHours(2))
                 .pontos(PONTOS_DO_EVENTO).build();
         Inscricao inscricao = inscricao(evento, InscricaoStatus.ATIVA);
         cenario(evento, inscricao, null);
 
-        var resultado = pontuacaoService.calcular(ALUNO_ID, periodo.getId());
+        var resultado = pontuacaoService.calcular(ALUNO_ID);
 
         assertThat(resultado.pontosTotal())
                 .as("inscrito num evento futuro nao pode ser tratado como faltoso")
@@ -215,7 +202,7 @@ class PontuacaoServiceTest {
         Evento evento = eventoEncerrado();
         cenario(evento, null, null);
 
-        var resultado = pontuacaoService.calcular(ALUNO_ID, periodo.getId());
+        var resultado = pontuacaoService.calcular(ALUNO_ID);
 
         assertThat(resultado.pontosTotal()).isZero();
         assertThat(resultado.eventos()).isEmpty();

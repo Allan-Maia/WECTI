@@ -7,19 +7,12 @@ import { usePontuacao } from '../../hooks/usePontuacao';
 import { formatarDataHora } from '../../utils/data';
 
 export default function PontuacaoPage() {
-  const { pontuacao, carregando, erro, semPeriodoAtivo, recarregar } = usePontuacao();
+  const { pontuacao, carregando, erro, recarregar } = usePontuacao();
 
   return (
-    <PageContainer titulo="Pontuação" descricao="Sua pontuação no período atual">
+    <PageContainer titulo="Pontuação" descricao="Seus pontos no WECTI">
       {carregando && <LoadingBlock mensagem="Carregando pontuação..." />}
       {!carregando && erro && <ErrorMessage mensagem={erro} onTentarNovamente={recarregar} />}
-      {!carregando && !erro && semPeriodoAtivo && (
-        <EmptyState
-          titulo="Nenhum período ativo"
-          descricao="Ainda não há um período (semestre) cadastrado para a data de hoje."
-          icone="🗓️"
-        />
-      )}
       {!carregando && !erro && pontuacao && (
         <div className="flex flex-col gap-6">
           <div className="rounded-card border border-border bg-surface p-8 text-center">

@@ -9,7 +9,6 @@ import com.wecti.api.exception.RegraNegocioException;
 import com.wecti.api.repository.EventoRepository;
 import com.wecti.api.repository.InscricaoRepository;
 import com.wecti.api.repository.PalestranteRepository;
-import com.wecti.api.repository.PeriodoRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,25 +22,20 @@ import java.util.UUID;
 public class EventoService {
 
     private final EventoRepository eventoRepository;
-    private final PeriodoRepository periodoRepository;
     private final PalestranteRepository palestranteRepository;
     private final InscricaoRepository inscricaoRepository;
     private final InscricaoService inscricaoService;
 
-    public EventoService(EventoRepository eventoRepository, PeriodoRepository periodoRepository,
-                          PalestranteRepository palestranteRepository, InscricaoRepository inscricaoRepository,
-                          InscricaoService inscricaoService) {
+    public EventoService(EventoRepository eventoRepository, PalestranteRepository palestranteRepository,
+                          InscricaoRepository inscricaoRepository, InscricaoService inscricaoService) {
         this.eventoRepository = eventoRepository;
-        this.periodoRepository = periodoRepository;
         this.palestranteRepository = palestranteRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.inscricaoService = inscricaoService;
     }
 
-    public List<Evento> listar(UUID periodoId, String status) {
-        List<Evento> eventos = periodoId != null
-                ? eventoRepository.findByPeriodoId(periodoId)
-                : eventoRepository.findAll();
+    public List<Evento> listar(String status) {
+        List<Evento> eventos = eventoRepository.findAll();
 
         LocalDateTime agora = LocalDateTime.now();
         if ("futuros".equals(status)) {
@@ -63,8 +57,8 @@ public class EventoService {
      * sai de uma consulta agrupada unica - contar evento a evento faria
      * uma consulta por linha da tela.
      */
-    public List<EventoResponse> listarComVagas(UUID periodoId, String status) {
-        List<Evento> eventos = listar(periodoId, status);
+    public List<EventoResponse> listarComVagas(String status) {
+        List<Evento> eventos = listar(status);
         Map<UUID, Long> ocupacao = inscricaoService.inscritosAtivosPorEvento(
                 eventos.stream().map(Evento::getId).toList());
         return eventos.stream()
@@ -80,7 +74,6 @@ public class EventoService {
     public EventoResponse criar(NovoEventoRequest request) {
         validarDatas(request);
         Evento evento = Evento.builder()
-                .periodo(buscarPeriodoPelaData(request.dataHoraInicio()))
                 .titulo(request.titulo())
                 .descricao(request.descricao())
                 .local(request.local())
@@ -99,7 +92,6 @@ public class EventoService {
         long inscritos = inscricaoService.inscritosAtivos(id);
         validarCapacidade(request.capacidade(), inscritos);
 
-        evento.setPeriodo(buscarPeriodoPelaData(request.dataHoraInicio()));
         evento.setTitulo(request.titulo());
         evento.setDescricao(request.descricao());
         evento.setLocal(request.local());
@@ -136,23 +128,6 @@ public class EventoService {
         if (!request.dataHoraFim().isAfter(request.dataHoraInicio())) {
             throw new CampoInvalidoException("dataHoraFim", "A data/hora de termino deve ser depois da data/hora de inicio");
         }
-    }
-
-    /**
-     * O admin nao escolhe mais o Periodo manualmente (o formulario ja tem
-     * data/hora do evento, que basta) - descobrimos sozinhos em qual
-     * Periodo cadastrado a data do evento cai. Se nenhum Periodo cobrir
-     * essa data, quem esta cadastrando o evento precisa cadastrar um
-     * Periodo pra ela antes (por API - POST /periodos).
-     */
-    private com.wecti.api.domain.Periodo buscarPeriodoPelaData(LocalDateTime dataHoraInicio) {
-        List<com.wecti.api.domain.Periodo> periodos = periodoRepository.findQueContem(dataHoraInicio.toLocalDate());
-        if (periodos.isEmpty()) {
-            throw new RegraNegocioException(
-                    "Nao existe um Periodo cadastrado que cubra a data do evento (" + dataHoraInicio.toLocalDate()
-                            + "). Cadastre um Periodo com esse intervalo antes de criar o evento.");
-        }
-        return periodos.get(0);
     }
 
     private Set<com.wecti.api.domain.Palestrante> buscarPalestrantes(List<UUID> palestranteIds) {

@@ -57,8 +57,28 @@ confirmar de novo.
   check-in.
 - **Penalidade**: o no-show desconta exatamente os pontos que aquele
   evento valeria.
-- **Período**: a pontuação é acumulada dentro do período (semestre) e
-  reinicia a cada novo período cadastrado (`Periodo`).
+- **Não existe recorte por semestre.** A pontuação é simplesmente a do
+  aluno no WECTI, somando todas as palestras mais os pontos de gincana.
+  Não há reinício por período.
+
+  > Uma versão anterior deste arquivo afirmava o contrário — "a pontuação
+  > é acumulada dentro do período (semestre) e reinicia a cada novo
+  > período" — e listava isso como regra fechada. **Era errado.** A regra
+  > nasceu do rascunho inicial do `openapi.yaml`, escrito antes de falar
+  > com o professor, e nunca foi validada. Perguntado diretamente se o
+  > semestre do aluno impactaria a pontuação das palestras, ele
+  > respondeu: *"Qualquer aluno pode se matricular de qualquer palestra.
+  > Não precisa relacionar com nada."*
+  >
+  > A entidade `Periodo` foi removida na migration V7. Os dados mostravam
+  > que ninguém entendia o conceito: os dois registros em produção se
+  > chamavam "Matutino" e "Noturno", com datas idênticas. Pior, a
+  > pontuação e o ranking buscavam "o período que contém hoje" e falhavam
+  > quando não havia nenhum — as telas parariam de carregar em
+  > 21/12/2026, sem erro visível.
+  >
+  > Se um dia for preciso separar edições do WECTI, o recorte é por
+  > **data do evento**, não por uma entidade nova.
 - **RGM**: identificador acadêmico do aluno, 8 dígitos, único.
   Obrigatório quando `perfil = ALUNO`; essa obrigatoriedade é validada em
   código (service), não no schema do banco (a constraint do banco só

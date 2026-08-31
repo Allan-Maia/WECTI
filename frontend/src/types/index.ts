@@ -33,19 +33,6 @@ export interface NovoUsuario {
   curso?: string | null;
 }
 
-export interface Periodo {
-  id: string;
-  nome: string;
-  data_inicio: string;
-  data_fim: string;
-}
-
-export interface NovoPeriodo {
-  nome: string;
-  data_inicio: string;
-  data_fim: string;
-}
-
 export interface Palestrante {
   id: string;
   nome: string;
@@ -61,7 +48,6 @@ export interface Evento {
   id: string;
   titulo: string;
   descricao: string | null;
-  periodo_id: string;
   local: string | null;
   data_hora_inicio: string;
   data_hora_fim: string;
@@ -80,8 +66,6 @@ export interface Evento {
 export interface NovoEvento {
   titulo: string;
   descricao?: string;
-  // Sem periodo_id aqui de proposito: o backend descobre sozinho o
-  // Periodo (semestre) a partir da data do evento - ver EventoService.
   local?: string;
   data_hora_inicio: string;
   data_hora_fim: string;
@@ -164,16 +148,16 @@ export interface PontuacaoExtra {
   id: string;
   aluno_id: string;
   aluno_nome: string;
-  periodo_id: string;
   pontos: number;
   motivo: string;
   criado_por_nome: string;
   criado_em: string;
 }
 
-export interface PontuacaoPeriodo {
-  periodo_id: string;
-  periodo_nome: string;
+/** Pontuação do aluno no WECTI. Sem recorte por semestre - o conceito de
+ *  "período" foi removido do sistema (nunca foi validado, e fazia a tela
+ *  parar de carregar quando o semestre cadastrado terminava). */
+export interface Pontuacao {
   /** O que vale no ranking: eventos + extras. */
   pontos_total: number;
   pontos_eventos: number;
@@ -197,8 +181,6 @@ export interface RankingItem {
 }
 
 export interface Ranking {
-  periodo_id: string;
-  periodo_nome: string;
   itens: RankingItem[];
 }
 

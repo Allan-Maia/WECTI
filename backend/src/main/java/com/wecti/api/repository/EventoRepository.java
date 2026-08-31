@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface EventoRepository extends JpaRepository<Evento, UUID> {
-    List<Evento> findByPeriodoId(UUID periodoId);
     List<Evento> findByDataHoraInicioAfter(LocalDateTime momento);
     List<Evento> findByDataHoraFimBefore(LocalDateTime momento);
 

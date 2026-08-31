@@ -11,7 +11,8 @@ export function formatarDataHora(iso: string | null | undefined): string {
   return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
 }
 
-/** Mesma coisa, so a data (sem hora) - usado pra Periodo.data_inicio/data_fim.
+/** Mesma coisa, so a data (sem hora) - usado na validacao publica de
+ *  certificado, que mostra a data de realizacao do evento.
  *  Não usa `new Date(string)` de propósito: uma string "yyyy-MM-dd" (sem
  *  horário) é interpretada como UTC-meia-noite pelo JS, e exibida depois
  *  no fuso local - em fusos negativos (Brasil, UTC-3) isso mostra sempre

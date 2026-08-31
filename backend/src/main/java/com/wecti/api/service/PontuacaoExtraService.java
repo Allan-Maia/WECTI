@@ -1,7 +1,6 @@
 package com.wecti.api.service;
 
 import com.wecti.api.domain.Perfil;
-import com.wecti.api.domain.Periodo;
 import com.wecti.api.domain.PontuacaoExtra;
 import com.wecti.api.domain.Usuario;
 import com.wecti.api.dto.NovaPontuacaoExtraRequest;
@@ -36,13 +35,10 @@ public class PontuacaoExtraService {
 
     private final PontuacaoExtraRepository repository;
     private final UsuarioRepository usuarioRepository;
-    private final PeriodoService periodoService;
 
-    public PontuacaoExtraService(PontuacaoExtraRepository repository, UsuarioRepository usuarioRepository,
-                                  PeriodoService periodoService) {
+    public PontuacaoExtraService(PontuacaoExtraRepository repository, UsuarioRepository usuarioRepository) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
-        this.periodoService = periodoService;
     }
 
     public PontuacaoExtra lancar(NovaPontuacaoExtraRequest request, UUID adminId) {
@@ -63,20 +59,17 @@ public class PontuacaoExtraService {
 
         Usuario admin = usuarioRepository.findById(adminId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario nao encontrado"));
-        Periodo periodo = periodoService.resolver(request.periodoId());
 
         return repository.save(PontuacaoExtra.builder()
                 .aluno(aluno)
-                .periodo(periodo)
                 .pontos(request.pontos())
                 .motivo(request.motivo().trim())
                 .criadoPor(admin)
                 .build());
     }
 
-    public List<PontuacaoExtra> listar(UUID alunoId, UUID periodoId) {
-        Periodo periodo = periodoService.resolver(periodoId);
-        return repository.findByAlunoIdAndPeriodoIdOrderByCriadoEmDesc(alunoId, periodo.getId());
+    public List<PontuacaoExtra> listar(UUID alunoId) {
+        return repository.findByAlunoIdOrderByCriadoEmDesc(alunoId);
     }
 
     /** Desfaz um lancamento. E o caminho para corrigir "lancei no aluno
@@ -88,16 +81,10 @@ public class PontuacaoExtraService {
         repository.deleteById(id);
     }
 
-    public int totalDoAluno(UUID alunoId, UUID periodoId) {
-        return repository.findByAlunoIdAndPeriodoIdOrderByCriadoEmDesc(alunoId, periodoId).stream()
-                .mapToInt(PontuacaoExtra::getPontos)
-                .sum();
-    }
-
-    /** Extras de todos os alunos do periodo, somados por aluno - o
-     *  ranking precisa da turma inteira sem consultar um a um. */
-    public Map<UUID, Integer> totaisDoPeriodo(UUID periodoId) {
-        return repository.findByPeriodoId(periodoId).stream()
+    /** Extras de todos os alunos, somados por aluno - o ranking precisa
+     *  da turma inteira sem consultar um a um. */
+    public Map<UUID, Integer> totaisPorAluno() {
+        return repository.findTodosParaRanking().stream()
                 .collect(Collectors.groupingBy(e -> e.getAluno().getId(),
                         Collectors.summingInt(PontuacaoExtra::getPontos)));
     }

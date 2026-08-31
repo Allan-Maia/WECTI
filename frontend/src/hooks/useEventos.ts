@@ -8,17 +8,16 @@ export function useEventos(filtro: FiltroEventos = {}) {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
-  const periodoId = filtro.periodo_id;
   const status = filtro.status;
 
   const recarregar = useCallback(() => {
     setCarregando(true);
     setErro(null);
-    listarEventos({ periodo_id: periodoId, status })
+    listarEventos({ status })
       .then(setEventos)
       .catch((e) => setErro(extrairMensagemErro(e, 'Nao foi possivel carregar os eventos.')))
       .finally(() => setCarregando(false));
-  }, [periodoId, status]);
+  }, [status]);
 
   useEffect(() => {
     recarregar();

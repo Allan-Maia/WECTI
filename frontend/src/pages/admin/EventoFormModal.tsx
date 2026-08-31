@@ -8,9 +8,6 @@ import { listarPalestrantes } from '../../services/palestrantes';
 import type { Evento, Palestrante } from '../../types';
 import { paraInputDateTime } from '../../utils/data';
 
-// Sem periodo_id aqui: o backend descobre sozinho o Periodo (semestre) a
-// partir da data do evento - ver EventoService.buscarPeriodoPelaData.
-//
 // O schema é uma função (não um objeto fixo) porque a validação de "início
 // não pode ser no passado" só faz sentido pra data nova - editando um
 // evento que já começou (ou já terminou) sem mexer no campo de início,

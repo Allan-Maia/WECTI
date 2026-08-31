@@ -3,7 +3,6 @@ package com.wecti.api.service;
 import com.wecti.api.domain.Checkin;
 import com.wecti.api.domain.Evento;
 import com.wecti.api.domain.Inscricao;
-import com.wecti.api.domain.Periodo;
 import com.wecti.api.domain.Usuario;
 import com.wecti.api.dto.RankingItemResponse;
 import com.wecti.api.dto.RankingResponse;
@@ -26,7 +25,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Classificacao dos alunos por pontos no periodo.
+ * Classificacao dos alunos por pontos no WECTI.
  *
  * <p><b>Por que nao reutiliza PontuacaoService.</b> A regra e a mesma
  * (esta em {@link CalculoPontuacaoEvento}, usada pelos dois), mas o
@@ -34,6 +33,11 @@ import java.util.stream.Collectors;
  * aluno faria duas consultas por evento por aluno - com 400 alunos e 10
  * eventos, 8 mil consultas para montar uma tela. Aqui tudo do periodo e
  * carregado em quatro consultas e distribuido em memoria.
+ *
+ * <p><b>Sem recorte por semestre.</b> O conceito de "periodo" foi
+ * removido do sistema (ver V7__remove_periodo.sql): nunca foi validado
+ * com o professor e fazia o ranking parar de carregar assim que o
+ * semestre cadastrado terminava.
  *
  * <p><b>Empates.</b> Quem tem o mesmo total divide a mesma posicao, e a
  * posicao seguinte pula (1, 2, 2, 4). Inventar desempate por criterio
@@ -47,17 +51,15 @@ public class RankingService {
     private final InscricaoRepository inscricaoRepository;
     private final CheckinRepository checkinRepository;
     private final PontuacaoExtraService pontuacaoExtraService;
-    private final PeriodoService periodoService;
     private final UsuarioRepository usuarioRepository;
 
     public RankingService(EventoRepository eventoRepository, InscricaoRepository inscricaoRepository,
                            CheckinRepository checkinRepository, PontuacaoExtraService pontuacaoExtraService,
-                           PeriodoService periodoService, UsuarioRepository usuarioRepository) {
+                           UsuarioRepository usuarioRepository) {
         this.eventoRepository = eventoRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.checkinRepository = checkinRepository;
         this.pontuacaoExtraService = pontuacaoExtraService;
-        this.periodoService = periodoService;
         this.usuarioRepository = usuarioRepository;
     }
 
@@ -67,15 +69,13 @@ public class RankingService {
      *                   (homonimos existem). Na tela do aluno o ranking
      *                   mostra nome e curso, e mais nada.
      */
-    public RankingResponse montar(UUID periodoId, boolean incluirRgm) {
-        Periodo periodo = periodoService.resolver(periodoId);
-
-        Map<UUID, Evento> eventos = eventoRepository.findByPeriodoId(periodo.getId()).stream()
+    public RankingResponse montar(boolean incluirRgm) {
+        Map<UUID, Evento> eventos = eventoRepository.findAll().stream()
                 .collect(Collectors.toMap(Evento::getId, Function.identity()));
-        List<Inscricao> inscricoes = inscricaoRepository.findByPeriodoId(periodo.getId());
-        Map<UUID, Checkin> checkinsPorInscricao = checkinRepository.findByPeriodoId(periodo.getId()).stream()
+        List<Inscricao> inscricoes = inscricaoRepository.findTodasParaRanking();
+        Map<UUID, Checkin> checkinsPorInscricao = checkinRepository.findTodosParaRanking().stream()
                 .collect(Collectors.toMap(c -> c.getInscricao().getId(), Function.identity()));
-        Map<UUID, Integer> extras = pontuacaoExtraService.totaisDoPeriodo(periodo.getId());
+        Map<UUID, Integer> extras = pontuacaoExtraService.totaisPorAluno();
 
         LocalDateTime agora = LocalDateTime.now();
         Map<UUID, Usuario> alunos = new HashMap<>();
@@ -103,9 +103,9 @@ public class RankingService {
             }
         }
 
-        // Aluno que so recebeu pontos de gincana, sem inscricao nenhuma
-        // no periodo, tambem disputa - senao sumiria de um ranking em que
-        // tem pontos. Nao esta em "inscricoes", entao precisa ser buscado.
+        // Aluno que so recebeu pontos de gincana, sem inscricao nenhuma,
+        // tambem disputa - senao sumiria de um ranking em que tem pontos.
+        // Nao esta em "inscricoes", entao precisa ser buscado.
         List<UUID> semInscricao = extras.keySet().stream()
                 .filter(alunoId -> !alunos.containsKey(alunoId))
                 .toList();
@@ -147,7 +147,7 @@ public class RankingService {
                     parcial.eventosConcluidos()));
         }
 
-        return new RankingResponse(periodo.getId(), periodo.getNome(), itens);
+        return new RankingResponse(itens);
     }
 
     private record Parcial(Usuario aluno, int pontosEventos, int pontosExtras, int eventosConcluidos) {

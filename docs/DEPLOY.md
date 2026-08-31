@@ -110,16 +110,17 @@ antes**, porque uma delas apaga uma coluna.
 2. cPanel → **phpMyAdmin** → selecionar o banco → aba **SQL** → colar o
    conteúdo de `docs/verificar-banco.sql` e executar. Ele mostra em que
    versão o schema está e se alguma migration falhou.
-3. Comparar com o que o sistema espera hoje: **versão 6**.
+3. Comparar com o que o sistema espera hoje: **versão 7**.
 
 | Última versão no banco | O que o Flyway vai aplicar sozinho |
 |---|---|
-| 1 | V2, V3, V4, V5 e V6 |
-| 2 | V3, V4, V5 e V6 |
-| 3 | V4, V5 e V6 |
-| 4 | V5 e V6 |
-| 5 | Só a V6 |
-| 6 | Nada — já está atualizado |
+| 1 | V2 até V7 |
+| 2 | V3 até V7 |
+| 3 | V4 até V7 |
+| 4 | V5, V6 e V7 |
+| 5 | V6 e V7 |
+| 6 | Só a V7 |
+| 7 | Nada — já está atualizado |
 
 O que cada uma faz:
 
@@ -135,6 +136,21 @@ O que cada uma faz:
 - **V6** — adiciona `capacidade` em eventos (nulo = sem limite de vagas) e
   cria a tabela `pontuacoes_extras`, dos pontos de gincana lançados pelo
   admin. Nada é apagado.
+- **V7** — **apaga a tabela `periodos`** e a coluna `periodo_id` de
+  eventos e de `pontuacoes_extras`. É a segunda parte destrutiva (junto
+  com a V2), e o outro motivo do backup.
+
+  O conceito de "período (semestre)" nunca foi validado com o professor —
+  perguntado se o semestre impactaria a pontuação das palestras, ele
+  respondeu que não precisa relacionar com nada. Na prática ninguém o
+  entendeu como semestre: os dois registros cadastrados se chamavam
+  "Matutino" e "Noturno", com datas idênticas. Pior, a pontuação e o
+  ranking buscavam "o período que contém hoje" e falhavam quando não
+  havia nenhum — as telas parariam de carregar em 21/12/2026, sem erro
+  visível.
+
+  Nada de valor se perde: inscrições, presenças, pontos e certificados
+  não dependiam de período.
 
 > Se a consulta 2 do arquivo retornar alguma linha (`success = 0`), **não
 > suba a aplicação**: há uma migration que falhou no meio e o banco está
@@ -495,17 +511,8 @@ O sistema não cria um usuário administrador sozinho. Para o primeiro:
 O CPF é obrigatório para Admin justamente por isso: é o identificador que
 permite recuperar o acesso.
 
-Depois, ainda antes de cadastrar o primeiro evento, é preciso **criar o
-período (semestre) vigente** — o cadastro de evento é recusado se a data
-não cair dentro de um período existente. Não há tela para isso; hoje é
-via API:
-
-```bash
-curl -X POST https://jadir9152.c44.integrator.host/periodos \
-  -H "Authorization: Bearer SEU_TOKEN_DE_ADMIN" \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"2026.2","data_inicio":"2026-08-01","data_fim":"2026-12-20"}'
-```
+Feito isso, o admin já pode cadastrar eventos direto pela tela. Não há
+mais nenhum passo de configuração antes do primeiro evento.
 
 ---
 

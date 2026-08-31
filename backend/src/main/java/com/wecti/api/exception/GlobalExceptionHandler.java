@@ -9,7 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -75,6 +77,37 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErroResponse> handleConstraintViolation(ConstraintViolationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErroResponse.de(400, "campo_invalido", ex.getMessage()));
+    }
+
+    /**
+     * Valor na URL que nao converte para o tipo esperado - tipicamente um
+     * UUID malformado em /eventos/{id}, /usuarios/{id}, etc.
+     *
+     * <p>Sem isto, cai no tratador generico e vira <b>500 com stack trace
+     * no log</b>: um erro de quem chamou, registrado como falha do
+     * servidor. Basta alguem digitar uma URL errada ou um link antigo
+     * quebrar para poluir o log e assustar quem for investigar.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErroResponse> handleTipoInvalidoNaUrl(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErroResponse.de(400, "campo_invalido",
+                        "Valor invalido para '" + ex.getName() + "' no endereco da requisicao", ex.getName()));
+    }
+
+    /**
+     * Metodo HTTP que a rota nao aceita - por exemplo GET em
+     * /usuarios/{id}, que so responde a PUT e DELETE.
+     *
+     * <p>Mesmo problema do handler acima: sem tratamento vira 500 com
+     * stack trace, dizendo "o servidor quebrou" quando o certo e 405
+     * ("esse endereco existe, mas nao com esse metodo").
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErroResponse> handleMetodoNaoSuportado(HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ErroResponse.de(405, "metodo_nao_permitido",
+                        "O metodo " + ex.getMethod() + " nao e aceito neste endereco"));
     }
 
     /** JSON malformado, enum/UUID invalido no corpo da requisicao, etc. -
