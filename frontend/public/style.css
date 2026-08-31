@@ -83,6 +83,21 @@ nav {
 }
 .nav-cta:hover { opacity: 0.85; }
 
+/* Entrada para o sistema (Primeiro acesso / Login). Ficam juntos, a
+   direita, separados dos links de secao por um divisor - sao acoes, nao
+   navegacao dentro da pagina. */
+.nav-acesso:first-of-type { margin-left: 0.75rem; padding-left: 1.5rem; border-left: 1px solid var(--border); }
+.nav-ghost {
+  border: 1px solid var(--border);
+  color: #fff !important;
+  padding: 0.45rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  transition: border-color 0.2s, background 0.2s !important;
+}
+.nav-ghost:hover { border-color: var(--accent2); background: rgba(0,212,176,0.08); }
+
 /* hamburger */
 .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
 .hamburger span { width: 24px; height: 2px; background: #fff; border-radius: 2px; transition: 0.3s; }
@@ -530,6 +545,168 @@ section { padding: 6rem 2rem; }
 }
 
 /* ──────────────────────────────────────────
+   PALESTRANTES
+────────────────────────────────────────── */
+#palestrantes { background: var(--surface); }
+.palestrantes-header { text-align: center; margin-bottom: 5rem; }
+.palestrantes-header .section-desc { max-width: 520px; }
+
+.palestrantes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/*
+   A foto fica por cima da borda do card, como no layout aprovado. Por
+   isso o card tem padding-top folgado e a foto sobe com margin-top
+   negativa - assim o circulo "invade" o topo sem depender de position
+   absolute, que quebraria a altura igual entre os cards.
+*/
+.palestrante-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 1.5rem 1.75rem;
+  margin-top: 70px;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.palestrante-card:hover { border-color: var(--accent2); transform: translateY(-4px); }
+
+.palestrante-foto {
+  width: 140px;
+  height: 140px;
+  margin-top: -70px;
+  margin-bottom: 1.25rem;
+  border-radius: 50%;
+  object-fit: cover;
+  /* O anel usa a cor de fundo da secao para "recortar" o circulo da
+     borda do card, em vez de um contorno solido que brigaria com ela. */
+  border: 3px solid var(--accent2);
+  box-shadow: 0 0 0 8px var(--surface);
+  background: var(--surface2);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.palestrante-card:hover .palestrante-foto {
+  border-color: var(--accent-light);
+  box-shadow: 0 0 0 8px var(--surface), 0 0 28px -4px rgba(0,232,196,0.45);
+}
+
+.palestrante-nome {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.85rem;
+}
+.palestrante-tema {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  flex-grow: 1;
+}
+.palestrante-quando {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-light);
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .palestrantes-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+}
+@media (max-width: 560px) {
+  .palestrantes-grid { grid-template-columns: 1fr; }
+}
+
+/* ──────────────────────────────────────────
+   PAGINA DO PALESTRANTE
+────────────────────────────────────────── */
+.pagina-topo {
+  padding: 9rem 2rem 4rem;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 70% 100% at 50% 0%, rgba(0,212,176,0.10) 0%, transparent 70%),
+    var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.pagina-topo h1 {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pagina-topo .footer-divider { margin-top: 1.25rem; }
+
+.palestrante-detalhe {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+.palestrante-detalhe .foto {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent2);
+}
+.palestrante-detalhe h2 {
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding-bottom: 0.85rem;
+  border-bottom: 2px solid var(--accent2);
+  margin-bottom: 1.5rem;
+}
+
+/* Tema / dia / horario: uma linha so no desktop, empilhado no celular. */
+.palestrante-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  margin-bottom: 2rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.palestrante-meta strong { color: var(--accent-light); font-weight: 600; }
+
+.palestrante-bio p {
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.85;
+}
+.palestrante-bio p + p { margin-top: 1.25rem; }
+
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 3rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-light);
+  transition: gap 0.2s;
+}
+.voltar:hover { gap: 0.85rem; }
+
+@media (max-width: 700px) {
+  .palestrante-detalhe { grid-template-columns: 1fr; gap: 2rem; justify-items: center; text-align: center; }
+  .palestrante-detalhe h2 { text-align: center; }
+  .palestrante-meta { justify-content: center; }
+  .palestrante-bio p { text-align: left; }
+}
+
+/* ──────────────────────────────────────────
    MASONRY GALLERY
 ────────────────────────────────────────── */
 .masonry-grid {
@@ -595,6 +772,10 @@ footer {
     border-bottom: 1px solid var(--border);
   }
   .hamburger { display: flex; }
+  /* No menu aberto os cartoes viram itens empilhados: sem o divisor
+     vertical, que so faz sentido com os links lado a lado. */
+  .nav-acesso:first-of-type { margin-left: 0; padding-left: 0; border-left: none; }
+  .nav-links.open .nav-cta, .nav-links.open .nav-ghost { display: inline-block; text-align: center; }
   .hero-stats { gap: 2rem; }
   .hero-content { grid-template-columns: 1fr; }
   .hero-visual { display: none; }

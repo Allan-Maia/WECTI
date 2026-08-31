@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Configuracao de log explicita e autossuficiente. A hospedagem
+  (Integrator Host) injeta uma variavel de ambiente propria para o
+  pattern de log (provavelmente LOGGING_PATTERN_FILE) com um valor
+  malformado - falta o "%n" no final, o que quebra o parser do Logback e
+  derruba a aplicacao antes mesmo do Spring context subir.
+
+  Ter este arquivo aqui faz o Spring Boot usar exclusivamente esta
+  configuracao (DefaultLogbackConfiguration nunca e acionada), entao o
+  valor problematico injetado pela hospedagem e simplesmente ignorado.
+-->
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

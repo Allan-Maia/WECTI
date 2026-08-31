@@ -1,0 +1,124 @@
+# Namespace proprio (app.datasource.*), nao spring.datasource.* - a
+# hospedagem (Integrator Host) injeta SPRING_DATASOURCE_USERNAME/PASSWORD
+# como variavel de ambiente do processo, e variavel de ambiente sempre
+# ganha de qualquer application.yml. O DataSourceConfig.java le essas
+# propriedades e monta o DataSource manualmente, ignorando a
+# spring.datasource.* que a hospedagem sobrescreve.
+app:
+  datasource:
+    # Nome do banco vem de DB_NAME: no cPanel o banco recebe o prefixo da
+    # conta, e esse nome muda se a conta ou o banco mudarem. Deixar fixo
+    # aqui obrigaria a recompilar o .jar so pra corrigir um nome.
+    # DB_HOST/DB_PORT tambem sao variaveis pelo mesmo motivo, embora quase
+    # sempre fiquem em localhost:3306 na hospedagem compartilhada.
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:jadir9152_wecti}?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
+    # Sem valor padrao de proposito: usuario/senha de producao nunca ficam
+    # no codigo-fonte. Configure DB_USER/DB_PASSWORD como variavel de
+    # ambiente real no painel da hospedagem (ou no application.yml externo
+    # em appservers/standalone) - se nao estiverem definidas, a aplicacao
+    # falha ao subir em vez de usar um valor exposto aqui.
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cors:
+    # Origens que podem chamar a API do navegador (politica de CORS, ver
+    # SecurityConfig.corsConfigurationSource - usa allowedOriginPatterns,
+    # entao "*" aqui funciona como coringa de verdade). Em producao,
+    # defina CORS_ALLOWED_ORIGINS com o dominio real do frontend (varias
+    # origens separadas por virgula) assim que ele for publicado - sem
+    # isso, o navegador bloqueia toda chamada do site pra essa API.
+    #
+    # O padrao de dev inclui 192.168.*.*/10.*.*.* pra cobrir testar o
+    # site de outro aparelho na mesma rede Wi-Fi (ex.: celular acessando
+    # http://<ip-do-notebook>:5173) - sem isso, so "localhost" mesmo
+    # conseguia logar.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://192.168.*.*:5173,http://10.*.*.*:5173}
+  # URL do frontend usada pra montar o link embutido no QR code de
+  # check-in/check-out (CheckinSessaoController) - o aluno escaneia com a
+  # camera do celular, que abre essa URL direto, sem precisar de app.
+  # Configure FRONTEND_URL com o dominio real assim que o frontend for
+  # publicado.
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  checkin:
+    # De quanto em quanto tempo o codigo embutido no QR de check-in muda
+    # (ver CodigoRotativoCheckin). O QR e o mesmo pra sala inteira, entao
+    # sem rotacao bastava um aluno fotografar a tela e mandar no grupo pra
+    # quem nao veio marcar presenca de casa.
+    #
+    # E um equilibrio: menor = print compartilhado vence mais rapido;
+    # maior = mais folga pra quem escaneou e ainda precisou fazer login
+    # antes de confirmar. A janela anterior tambem e aceita, entao o
+    # codigo vale na pratica entre 1 e 2 janelas.
+    janela-codigo-segundos: ${CHECKIN_JANELA_CODIGO_SEGUNDOS:60}
+    # A sessao de check-in so aceita confirmacao dentro do horario do
+    # proprio evento, mais estas folgas. Antes valia "criacao + 6 horas",
+    # o que deixava um QR gerado de manha ainda funcionando a tarde.
+    # Antes: tempo pro admin projetar o QR enquanto a sala enche.
+    tolerancia-antes-minutos: ${CHECKIN_TOLERANCIA_ANTES_MINUTOS:30}
+    # Depois: tempo pra quem esta saindo fazer o check-out na porta.
+    tolerancia-depois-minutos: ${CHECKIN_TOLERANCIA_DEPOIS_MINUTOS:30}
+  rate-limit:
+    # Trava forca bruta nas rotas de autenticacao
+    # (ver RateLimitAutenticacaoFilter). Conta apenas tentativas que
+    # FALHAM: numa palestra a turma toda sai pelo mesmo IP do Wi-Fi do
+    # campus, e somar acessos bem-sucedidos bloquearia alunos legitimos.
+    max-falhas: ${RATE_LIMIT_MAX_FALHAS:10}
+    janela-minutos: ${RATE_LIMIT_JANELA_MINUTOS:15}
+
+spring:
+  application:
+    name: wecti-api
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        # As entidades usam java.util.UUID como PK; sem isso, o Hibernate
+        # mapeia UUID para BINARY(16) por padrao no dialeto MySQL, mas a
+        # migration usa VARCHAR(36) - a validacao do schema quebraria no
+        # startup sem essa propriedade.
+        type:
+          preferred_uuid_jdbc_type: VARCHAR
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+  # Em producao a aplicacao fica ATRAS do servidor web da hospedagem, que
+  # e quem termina o HTTPS (certificado TLS) e repassa a requisicao pra ca
+  # em HTTP interno. Sem isto, a aplicacao enxerga toda requisicao como
+  # "http" e com o IP do proxy, o que quebra duas coisas:
+  #
+  #   1. o IP usado pelo limite de tentativas de login
+  #      (RateLimitAutenticacaoFilter) seria SEMPRE o do proxy - um unico
+  #      atacante bloquearia o site inteiro;
+  #   2. qualquer URL que a aplicacao montar sairia como http:// mesmo o
+  #      site estando em https://.
+  #
+  # "framework" faz o Spring ler os cabecalhos X-Forwarded-* que o proxy
+  # envia e corrigir esquema, host e IP de origem.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:framework}
+
+springdoc:
+  swagger-ui:
+    path: /docs
+    # Documentacao interativa da API: fica ligada em desenvolvimento, mas
+    # em producao normalmente nao ha motivo pra deixar o mapa completo dos
+    # endpoints aberto pra qualquer visitante - desligue com
+    # SPRINGDOC_ENABLED=false.
+    enabled: ${SPRINGDOC_ENABLED:true}
+  api-docs:
+    path: /api-docs
+    enabled: ${SPRINGDOC_ENABLED:true}
+
+jwt:
+  # Idem: sem default. Configure JWT_SECRET com um valor aleatorio forte
+  # no ambiente de producao - esse segredo assina os tokens de login, um
+  # valor exposto no codigo permitiria forjar tokens validos.
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}

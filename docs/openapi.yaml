@@ -1,0 +1,1372 @@
+# =============================================================================
+# WECTI - Rascunho do contrato de API
+# =============================================================================
+# Regras de negocio aplicadas neste contrato (resumo - confirmar com o time):
+#   - Cancelamento de inscricao permitido até 1 dia antes do inicio do evento.
+#   - Penalizacao (no-show) se o aluno NAO cancelou E NAO fez check-in.
+#   - Certificado exige check-in + check-out + permanencia >= 75% da duracao
+#     do evento (calculada a partir de data_hora_inicio/data_hora_fim).
+#   - Pontos do evento sao definidos no proprio cadastro do evento.
+#   - Nao ha recorte por semestre: a pontuacao e a do aluno no WECTI,
+#     somando todas as palestras mais os pontos de gincana. A entidade
+#     Periodo foi removida (migration V7) - nunca foi validada com o
+#     professor e fazia as telas de pontuacao e ranking pararem de
+#     carregar quando o semestre cadastrado terminava.
+#   - Perfis: admin, aluno (sem perfil "operador" nem "professor" -
+#     confirmado com o stakeholder do projeto).
+#   - Nao ha app Android dedicado: o admin gera o QR code de
+#     check-in/check-out pelo proprio site e o aluno confirma a propria
+#     presenca escaneando com a camera do celular (Android ou iOS).
+#   - Pontos do evento so contam para o aluno quando os criterios do
+#     certificado sao cumpridos (check-in + check-out + permanencia >= 75%).
+#   - Penalidade de no-show: o aluno perde exatamente os pontos que aquele
+#     evento valeria (mesmo valor do campo "pontos" do evento).
+#   - Cadastro de aluno exige RGM (Registro Geral do Aluno) - identificador
+#     academico da faculdade, numero de 8 digitos, unico por aluno.
+# =============================================================================
+
+openapi: 3.0.3
+
+info:
+  title: WECTI API
+  description: >
+    API central do sistema de controle de acesso a palestras e eventos.
+    O site (aluno e admin) consome exclusivamente esta API -
+    nenhum cliente acessa o banco direto. Nao ha app Android dedicado: o
+    check-in/check-out é feito via QR code lido pela câmera nativa do
+    celular do aluno. Este e um RASCUNHO inicial para alinhar o time
+    antes da Fase 1; campos e regras podem mudar conforme o
+    desenvolvimento avança.
+  version: 0.1.0-draft
+
+servers:
+  - url: http://localhost:8080/v1
+    description: Ambiente local de desenvolvimento
+  - url: https://api.wecti.com.br/v1
+    description: Produção (placeholder, ajustar quando definirem o domínio)
+
+tags:
+  - name: Auth
+    description: Login dos perfis ativos (admin, aluno)
+  - name: Usuarios
+  - name: Palestrantes
+  - name: Eventos
+  - name: Inscricoes
+  - name: Checkins
+    description: >
+      Admin gera um QR code por sessão (entrada e depois
+      saída) e projeta na tela; o próprio aluno confirma a presença
+      escaneando com a câmera do celular (Android ou iOS, sem app)
+  - name: Certificados
+  - name: Pontuacao
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  # ---------------------------------------------------------------------
+  # Auth
+  # ---------------------------------------------------------------------
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Autentica um usuário (aluno ou admin)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, senha]
+              properties:
+                email:
+                  type: string
+                  format: email
+                senha:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  usuario:
+                    $ref: '#/components/schemas/Usuario'
+        '401':
+          description: Credenciais inválidas
+
+  /auth/registrar:
+    post:
+      tags: [Auth]
+      summary: Cadastro público de aluno ("Primeiro acesso? Crie sua conta")
+      description: >
+        Sempre cria um usuário com perfil ALUNO - não existe campo
+        "perfil" no corpo da requisição, então não tem como quem se
+        autocadastra virar Admin por essa via. Cadastro de Admin continua
+        sendo feito só por outro Admin, em POST /usuarios. Já devolve
+        token (igual ao login), pra entrar direto no sistema.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, email, senha, rgm]
+              properties:
+                nome:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                senha:
+                  type: string
+                  format: password
+                  minLength: 6
+                rgm:
+                  type: string
+                  pattern: '^\d{8}$'
+                curso:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Conta criada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  usuario:
+                    $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Dados inválidos (email malformado, RGM fora do formato, senha curta)
+        '409':
+          description: Já existe um usuário com este email ou RGM
+
+  /auth/redefinir-senha:
+    post:
+      tags: [Auth]
+      summary: "\"Esqueci minha senha\" - redefine sem link por email"
+      description: >
+        Sem token/link por email de propósito - não há servidor de email
+        configurado no projeto, e o cliente confirmou que não precisa de
+        autenticação extra. A identidade é confirmada com o RGM (se
+        perfil = aluno) ou CPF (se perfil = admin) já cadastrados -
+        batendo, a pessoa já define a senha nova na mesma chamada. Serve
+        também pro Admin (sempre cadastrado por outro Admin com uma senha
+        provisória que ninguém sabe) definir a primeira senha de verdade.
+        Já devolve token (igual ao login), pra entrar direto no sistema.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, identificador, nova_senha]
+              properties:
+                email:
+                  type: string
+                  format: email
+                identificador:
+                  type: string
+                  description: RGM (8 dígitos, aluno) ou CPF (11 dígitos, admin)
+                nova_senha:
+                  type: string
+                  format: password
+                  minLength: 6
+      responses:
+        '200':
+          description: Senha redefinida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  usuario:
+                    $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Dados inválidos (email malformado, senha curta)
+        '401':
+          description: Email + RGM/CPF não conferem com nenhum cadastro
+
+  # ---------------------------------------------------------------------
+  # Usuarios
+  # ---------------------------------------------------------------------
+  /usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Lista usuários paginados (somente admin)
+      description: >
+        Paginado de propósito - a lista de usuários cresce muito quando o
+        sistema é liberado pros alunos, devolver tudo de uma vez não
+        escala. "busca" filtra por nome, email, RGM ou CPF (contém, sem
+        diferenciar maiúsculas/minúsculas no nome/email).
+      parameters:
+        - name: perfil
+          in: query
+          schema:
+            $ref: '#/components/schemas/Perfil'
+        - name: busca
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Página (começando em 0)
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Página de usuários
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conteudo:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Usuario'
+                  pagina:
+                    type: integer
+                  tamanho:
+                    type: integer
+                  total_elementos:
+                    type: integer
+                  total_paginas:
+                    type: integer
+    post:
+      tags: [Usuarios]
+      summary: Cadastra aluno ou convidado avulso
+      description: >
+        Usado pelo admin direto pelo site quando precisa
+        cadastrar alguém na hora, na porta do evento.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoUsuario'
+      responses:
+        '201':
+          description: Usuário criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+
+  /usuarios/{usuarioId}:
+    parameters:
+      - name: usuarioId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Usuarios]
+      summary: Atualiza um usuário (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoUsuario'
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '409':
+          description: Email ou RGM já usado por outro usuário
+    delete:
+      tags: [Usuarios]
+      summary: Exclui um usuário (somente admin)
+      responses:
+        '204':
+          description: Usuário excluído
+        '422':
+          description: Usuário possui inscrições e não pode ser excluído
+
+  /usuarios/me:
+    get:
+      tags: [Usuarios]
+      summary: Retorna o usuário autenticado
+      responses:
+        '200':
+          description: Dados do usuário logado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+
+  # ---------------------------------------------------------------------
+  # Palestrantes
+  # ---------------------------------------------------------------------
+  /palestrantes:
+    get:
+      tags: [Palestrantes]
+      summary: Lista palestrantes cadastrados
+      responses:
+        '200':
+          description: Lista de palestrantes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Palestrante'
+    post:
+      tags: [Palestrantes]
+      summary: Cadastra um novo palestrante (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoPalestrante'
+      responses:
+        '201':
+          description: Palestrante criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Palestrante'
+
+  # ---------------------------------------------------------------------
+  # Eventos
+  # ---------------------------------------------------------------------
+  /eventos:
+    get:
+      tags: [Eventos]
+      summary: Lista eventos
+      parameters:
+        - name: status
+          in: query
+          description: Filtra por eventos futuros ou já encerrados
+          schema:
+            type: string
+            enum: [futuros, encerrados]
+      responses:
+        '200':
+          description: Lista de eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Evento'
+    post:
+      tags: [Eventos]
+      summary: Cadastra um evento (admin)
+      description: >
+        A pontuação do evento é definida aqui, no cadastro (campo "pontos"),
+        conforme decidido pelo time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoEvento'
+      responses:
+        '201':
+          description: Evento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evento'
+
+  /eventos/{eventoId}:
+    parameters:
+      - name: eventoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Eventos]
+      summary: Detalha um evento
+      responses:
+        '200':
+          description: Dados do evento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evento'
+    put:
+      tags: [Eventos]
+      summary: Atualiza um evento (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoEvento'
+      responses:
+        '200':
+          description: Evento atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evento'
+    delete:
+      tags: [Eventos]
+      summary: Cancela um evento (admin)
+      responses:
+        '204':
+          description: Evento cancelado
+
+  # ---------------------------------------------------------------------
+  # Inscricoes
+  # ---------------------------------------------------------------------
+  /eventos/{eventoId}/inscricoes:
+    parameters:
+      - name: eventoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Inscricoes]
+      summary: Aluno se inscreve no evento
+      responses:
+        '201':
+          description: Inscrição criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inscricao'
+        '409':
+          description: Aluno já inscrito ou evento sem vagas
+    get:
+      tags: [Inscricoes]
+      summary: Lista inscritos no evento (admin)
+      responses:
+        '200':
+          description: Lista de inscrições
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Inscricao'
+
+  /me/inscricoes:
+    get:
+      tags: [Inscricoes]
+      summary: Lista as inscrições do aluno autenticado
+      parameters:
+        - name: status
+          in: query
+          description: Filtra entre eventos futuros e histórico
+          schema:
+            type: string
+            enum: [futuros, historico]
+      responses:
+        '200':
+          description: Lista de inscrições do aluno
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Inscricao'
+
+  /inscricoes/{inscricaoId}:
+    parameters:
+      - name: inscricaoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Inscricoes]
+      summary: Detalha uma inscrição
+      responses:
+        '200':
+          description: Dados da inscrição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inscricao'
+    delete:
+      tags: [Inscricoes]
+      summary: Cancela a inscrição
+      description: >
+        Só permitido até 1 dia antes do início do evento. Depois desse
+        prazo, retorna 422 e a inscrição passa a contar como no-show se o
+        aluno não fizer check-in.
+      responses:
+        '204':
+          description: Inscrição cancelada
+        '422':
+          description: Prazo de cancelamento (1 dia antes do evento) já passou
+
+  # ---------------------------------------------------------------------
+  # Checkins - por SESSAO de evento (nao mais por aluno)
+  # ---------------------------------------------------------------------
+  # O QR code individual do aluno (gerado na inscricao, enviado por
+  # e-mail) foi removido - nao ha mais app Android dedicado. Agora quem
+  # gera o QR e o admin, um por evento (tipo ENTRADA e depois
+  # tipo SAIDA), projetado na tela pro publico. O aluno le com a camera
+  # do proprio celular (Android ou iOS, sem precisar de app nenhum) - a
+  # camera abre a URL embutida no QR direto no navegador, que chama
+  # POST /checkin-sessoes/{sessaoId}/confirmar autenticado como aluno.
+  #
+  # O QR e o MESMO pra sala inteira - nao ha como ser individual, ele esta
+  # projetado. Duas travas impedem que ele seja repassado pra quem nao
+  # esta presente:
+  #
+  #  1. CODIGO ROTATIVO. A URL do QR carrega ?c=<codigo>, derivado do
+  #     segredo da sessao e da janela de tempo atual (HMAC-SHA256, padrao
+  #     de 60s, janela anterior tambem aceita). O GET .../qrcode devolve o
+  #     codigo da janela atual e diz em codigo_expira_em quando buscar o
+  #     proximo - a tela do admin fica nesse loop enquanto estiver aberta.
+  #     Um print mandado no grupo vence junto com a janela em que foi
+  #     tirado. O segredo nunca sai da API.
+  #  2. JANELA DO EVENTO. A sessao so aceita confirmacao entre o inicio e
+  #     o fim do proprio evento, mais as tolerancias de
+  #     app.checkin.tolerancia-*-minutos. Antes valia "criacao + 6h", o
+  #     que deixava um QR da manha ainda funcionando a tarde.
+  /eventos/{eventoId}/checkins:
+    parameters:
+      - name: eventoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Checkins]
+      summary: Relatório de presença do evento (admin)
+      description: >
+        Lista quem já fez check-in nesse evento (com ou sem check-out
+        ainda), com nome/RGM do aluno - usado na seção "Participantes do
+        Evento" da tela de check-in.
+      responses:
+        '200':
+          description: Lista de check-ins do evento
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    inscricao_id:
+                      type: string
+                      format: uuid
+                    aluno_id:
+                      type: string
+                      format: uuid
+                    aluno_nome:
+                      type: string
+                    aluno_rgm:
+                      type: string
+                      nullable: true
+                    entrada:
+                      type: string
+                      format: date-time
+                    saida:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    percentual_presenca:
+                      type: number
+                      format: float
+                      nullable: true
+        '404':
+          description: Evento não encontrado
+
+  /eventos/{eventoId}/checkin-sessoes:
+    parameters:
+      - name: eventoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Checkins]
+      summary: Gera uma sessão de check-in/check-out pro evento (admin)
+      description: >
+        Só pode ser criada dentro da janela do evento (início menos a
+        tolerância de antes, até o fim mais a tolerância de depois) - fora
+        disso o QR não valeria nada, então a API recusa na hora em vez de
+        deixar o admin projetar um QR morto.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaSessaoCheckin'
+      responses:
+        '201':
+          description: Sessão criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessaoCheckin'
+        '422':
+          description: Fora da janela de check-in do evento (ainda não abriu, ou já fechou)
+
+  /checkin-sessoes/{sessaoId}/qrcode:
+    parameters:
+      - name: sessaoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Checkins]
+      summary: QR code da janela atual, pra projetar na tela (admin)
+      description: >
+        O QR codifica a URL de confirmação
+        (`<frontend>/checkin/confirmar/{sessaoId}?c=<codigo>`) - a câmera
+        do celular do aluno abre direto, sem precisar de app.
+
+        O `c` muda a cada janela de tempo, então esta resposta vale por
+        pouco: `codigo_expira_em` diz quando a tela do admin deve pedir o
+        próximo. Não é refresh cosmético - a partir daí o QR anterior
+        deixa de ser aceito em `/confirmar`.
+
+        Devolve JSON (e não `image/png`, como na versão anterior)
+        justamente porque a imagem sozinha não basta: sem
+        `codigo_expira_em` a tela não teria como saber o ritmo da rotação.
+      responses:
+        '200':
+          description: QR da janela atual
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrCodeSessao'
+        '404':
+          description: Sessão não encontrada
+        '422':
+          description: Fora da janela de check-in do evento
+
+  /checkin-sessoes/{sessaoId}/confirmar:
+    parameters:
+      - name: sessaoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Checkins]
+      summary: Aluno confirma a própria entrada/saída ao escanear o QR
+      description: >
+        O `codigo` é o parâmetro `c` da URL que veio no QR. Precisa ser o
+        da janela atual ou o da imediatamente anterior - é o que faz um
+        link repassado no grupo parar de funcionar minutos depois.
+
+        Vai no corpo, e não na query string, pra não ficar registrado nos
+        logs de acesso do servidor web, de onde alguém poderia pescar
+        códigos ainda dentro da janela.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmarCheckin'
+      responses:
+        '200':
+          description: Check-in ou check-out confirmado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkin'
+        '400':
+          description: Código ausente no corpo
+        '404':
+          description: Sessão inexistente, ou aluno não inscrito no evento
+        '409':
+          description: Check-in já realizado
+        '422':
+          description: >
+            Código de uma janela já vencida (QR antigo ou repassado), fora
+            da janela do evento, inscrição cancelada, ou tentativa de
+            check-out sem ter feito check-in antes
+
+  # ---------------------------------------------------------------------
+  # Certificados
+  # ---------------------------------------------------------------------
+  /inscricoes/{inscricaoId}/certificado:
+    parameters:
+      - name: inscricaoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Certificados]
+      summary: Emite ou baixa o certificado do evento
+      description: >
+        Só libera o PDF se a inscrição tiver check-in, check-out e
+        permanência de pelo menos 75% da duração do evento.
+
+        O PDF traz nome do aluno, RGM, carga horária (calculada da
+        duração do evento), data de realização e o título do evento,
+        mais o bloco de validação: QR code apontando para
+        `{origem}/validar/{codigo}` e o código impresso para quem
+        preferir digitar. O código é gerado uma única vez por
+        certificado e reaproveitado nos downloads seguintes - senão um
+        código já impresso deixaria de validar.
+      responses:
+        '200':
+          description: Certificado em PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '422':
+          description: Critérios de presença ainda não cumpridos
+
+  /validar/{codigo}:
+    parameters:
+      - name: codigo
+        in: path
+        required: true
+        description: Código impresso no certificado (ex.\: WCT-2026-A7F3K2)
+        schema:
+          type: string
+    get:
+      tags: [Certificados]
+      summary: Valida um certificado pelo código (público, sem login)
+      description: >
+        Endpoint PÚBLICO de propósito: quem confere um certificado
+        costuma ser um recrutador ou outra instituição, que não tem
+        conta no sistema - exigir login inviabilizaria a própria
+        funcionalidade. A proteção não é o login: o código é aleatório
+        (SecureRandom, ~887 milhões de combinações, não sequencial),
+        então não dá para adivinhar códigos válidos e varrer os alunos
+        certificados.
+
+        Não devolve RGM: como o endpoint é aberto, tudo aqui é público
+        para quem tiver o código. Nome, evento, data e carga horária já
+        bastam para conferir autenticidade; o RGM aparece só no PDF, que
+        o próprio aluno decide para quem enviar.
+
+        O código é aceito com variações triviais de digitação
+        (minúsculas, espaços sobrando, sem os hífens).
+      security: []
+      responses:
+        '200':
+          description: Certificado encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  codigo:
+                    type: string
+                  aluno_nome:
+                    type: string
+                  evento_titulo:
+                    type: string
+                  data_realizacao:
+                    type: string
+                    format: date
+                  carga_horaria:
+                    type: string
+                    description: Ex.\: "2h" ou "2h30"
+                  emitido_em:
+                    type: string
+                    format: date-time
+        '404':
+          description: Nenhum certificado encontrado para o código informado
+
+  # ---------------------------------------------------------------------
+  # Pontuacao
+  # ---------------------------------------------------------------------
+  /me/pontuacao:
+    get:
+      tags: [Pontuacao]
+      summary: Pontuação do aluno autenticado
+      responses:
+        '200':
+          description: Pontuação do aluno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pontuacao'
+
+  /pontuacao/aluno/{alunoId}:
+    parameters:
+      - name: alunoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Pontuacao]
+      summary: Pontuação de um aluno específico (somente admin)
+      description: >
+        Para o painel de admin consultar a pontuação de qualquer aluno,
+        sem depender do token do próprio aluno usado em /me/pontuacao.
+      responses:
+        '200':
+          description: Pontuação do aluno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pontuacao'
+
+  # ---------------------------------------------------------------------
+  # Ranking e pontos extras (gincanas)
+  # ---------------------------------------------------------------------
+  /ranking:
+    get:
+      tags: [Pontuacao]
+      summary: Classificação dos alunos por pontos no período
+      description: >
+        Uma rota só para os dois perfis - a diferença está no que volta.
+        O RGM dos alunos só é incluído quando quem chama é ADMIN (que
+        precisa dele para não lançar pontos no aluno errado); para o
+        ALUNO vem nome e curso, e mais nada. Quem decide isso é o perfil
+        do token, nunca um parâmetro da requisição.
+
+
+        Alunos empatados dividem a mesma posição, e a posição seguinte
+        pula (1, 2, 2, 4). Entram na lista todos os alunos com alguma
+        inscrição, mais os que receberam pontos extras.
+      responses:
+        '200':
+          description: Classificação do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ranking'
+        '404':
+          description: Nenhum período ativo no momento
+
+  /pontuacao-extra:
+    post:
+      tags: [Pontuacao]
+      summary: Lança pontos manualmente num aluno (somente admin)
+      description: >
+        Usado para premiar gincanas feitas durante as palestras. Os
+        pontos somam-se aos das palestras assistidas dentro do mesmo
+        período.
+
+
+        `pontos` pode ser negativo, para corrigir um lançamento a maior
+        sem apagar o histórico, e é limitado a 1000 por lançamento -
+        trava contra dedo escorregado, já que digitar 5000 em vez de 50
+        decidiria o ranking inteiro sem ninguém perceber até a premiação.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaPontuacaoExtra'
+      responses:
+        '201':
+          description: Pontos lançados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PontuacaoExtra'
+        '400':
+          description: Pontos zerados, acima do limite, motivo em branco, ou usuário informado não é aluno
+        '404':
+          description: Aluno não encontrado, ou nenhum período ativo
+    get:
+      tags: [Pontuacao]
+      summary: Histórico de lançamentos de um aluno (somente admin)
+      description: >
+        O admin confere antes de lançar de novo, para não premiar duas
+        vezes a mesma gincana.
+      parameters:
+        - name: aluno_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lançamentos do aluno no período, mais recentes primeiro
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PontuacaoExtra'
+
+  /pontuacao-extra/{id}:
+    delete:
+      tags: [Pontuacao]
+      summary: Desfaz um lançamento de pontos (somente admin)
+      description: >
+        É o caminho para corrigir "lancei no aluno errado" sem deixar um
+        rastro confuso de mais e menos no histórico do aluno.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Lançamento removido
+        '404':
+          description: Lançamento não encontrado
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Perfil:
+      type: string
+      # Documentado em maiusculas porque e assim que o Jackson serializa o
+      # enum Java por padrao (Usuario.perfil, NovoUsuario.perfil e a claim
+      # "perfil" do JWT) - o rascunho original documentava em minusculas,
+      # mas nao era isso que a API implementada realmente devolvia/esperava.
+      enum: [ADMIN, ALUNO]
+
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        email:
+          type: string
+          format: email
+        perfil:
+          $ref: '#/components/schemas/Perfil'
+        rgm:
+          type: string
+          pattern: '^\d{8}$'
+          nullable: true
+          description: >
+            Registro Geral do Aluno (RGM) - identificador acadêmico da
+            faculdade, com 8 dígitos. Obrigatório e único quando
+            perfil = aluno; não se aplica a admin.
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          nullable: true
+          description: >
+            CPF do admin, 11 dígitos. Obrigatório e único quando
+            perfil = admin (é o identificador usado no "esqueci minha
+            senha" desse perfil); não se aplica a aluno.
+        curso:
+          type: string
+          nullable: true
+          description: >
+            Curso do aluno (ex.: "Ciência da Computação") - confirmado
+            com o professor (stakeholder do projeto) que é só
+            informativo, pra saber quais cursos estão participando das
+            palestras. Não afeta pontuação, elegibilidade pra inscrição
+            nem nenhuma outra regra de negócio - por isso texto livre,
+            opcional, sem unicidade. Não se aplica a admin.
+
+    NovoUsuario:
+      type: object
+      required: [nome, email, perfil]
+      properties:
+        nome:
+          type: string
+        email:
+          type: string
+          format: email
+        perfil:
+          $ref: '#/components/schemas/Perfil'
+        rgm:
+          type: string
+          pattern: '^\d{8}$'
+          nullable: true
+          description: >
+            Obrigatório quando perfil = aluno. O OpenAPI puro não expressa
+            "obrigatório somente se outro campo tiver determinado valor",
+            então essa regra precisa ser validada no backend.
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          nullable: true
+          description: >
+            Obrigatório quando perfil = admin, pela mesma razão do rgm
+            acima - validado no backend.
+        curso:
+          type: string
+          nullable: true
+          description: Opcional, só informativo (ver descrição em Usuario.curso).
+
+    Palestrante:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        bio:
+          type: string
+
+    NovoPalestrante:
+      type: object
+      required: [nome]
+      properties:
+        nome:
+          type: string
+        bio:
+          type: string
+
+    Evento:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        descricao:
+          type: string
+        local:
+          type: string
+        data_hora_inicio:
+          type: string
+          format: date-time
+        data_hora_fim:
+          type: string
+          format: date-time
+        pontos:
+          type: integer
+          description: >
+            Pontos que o evento vale para quem cumpre os critérios de
+            presença (check-in + check-out + 75% de permanência).
+        capacidade:
+          type: integer
+          nullable: true
+          description: >
+            Total de vagas. `null` significa sem limite - e o que
+            descreve os eventos criados antes desta regra existir.
+        inscritos:
+          type: integer
+          description: >
+            Vagas ocupadas agora. Conta apenas inscricoes ATIVAS: quem
+            cancela devolve a vaga para a fila.
+        vagas_restantes:
+          type: integer
+          nullable: true
+          description: >
+            `null` quando nao ha limite. Vem calculado da API de
+            proposito - se cada tela fizesse a propria subtracao, uma
+            delas acabaria esquecendo do caso "sem limite".
+        lotado:
+          type: boolean
+        palestrantes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Palestrante'
+
+    NovoEvento:
+      type: object
+      required: [titulo, data_hora_inicio, data_hora_fim, pontos]
+      description: >
+        O evento nao pertence a nenhum agrupamento por semestre: a
+        entidade Periodo foi removida do sistema (migration V7). Data,
+        hora e pontos do proprio evento sao tudo o que ele precisa.
+      properties:
+        titulo:
+          type: string
+        descricao:
+          type: string
+        local:
+          type: string
+        data_hora_inicio:
+          type: string
+          format: date-time
+        data_hora_fim:
+          type: string
+          format: date-time
+        pontos:
+          type: integer
+        capacidade:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: >
+            Numero de vagas. Omitir (ou enviar null) significa sem
+            limite. Ao ATUALIZAR um evento, um valor menor que o numero
+            de inscritos atuais e recusado com 422: nao existe tela para
+            o admin escolher a mao quem perde a vaga.
+        palestrante_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    NovaPontuacaoExtra:
+      type: object
+      required: [aluno_id, pontos, motivo]
+      properties:
+        aluno_id:
+          type: string
+          format: uuid
+        pontos:
+          type: integer
+          description: >
+            Diferente de zero, no máximo 1000 em módulo. Negativo corrige
+            um lançamento a maior.
+        motivo:
+          type: string
+          maxLength: 200
+          description: >
+            Obrigatório. Sem ele ninguém consegue explicar depois de onde
+            vieram os pontos de um aluno no ranking - e fica visível para
+            o próprio aluno na tela de pontuação dele.
+
+    PontuacaoExtra:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        aluno_id:
+          type: string
+          format: uuid
+        aluno_nome:
+          type: string
+        pontos:
+          type: integer
+        motivo:
+          type: string
+        criado_por_nome:
+          type: string
+          description: Qual admin lançou - sem isso não há como auditar um ranking contestado
+        criado_em:
+          type: string
+          format: date-time
+
+    Ranking:
+      type: object
+      properties:
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankingItem'
+
+    RankingItem:
+      type: object
+      properties:
+        posicao:
+          type: integer
+          description: Empatados dividem a mesma posição (1, 2, 2, 4)
+        aluno_id:
+          type: string
+          format: uuid
+        aluno_nome:
+          type: string
+        aluno_rgm:
+          type: string
+          nullable: true
+          description: Preenchido apenas quando quem consulta é ADMIN
+        aluno_curso:
+          type: string
+          nullable: true
+        pontos_eventos:
+          type: integer
+        pontos_extras:
+          type: integer
+        pontos_total:
+          type: integer
+        eventos_concluidos:
+          type: integer
+          description: >
+            Quantas palestras o aluno de fato pontuou - separa quem tem
+            100 pontos de cinco palestras de quem tem 100 de uma gincana.
+
+    Inscricao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        aluno_id:
+          type: string
+          format: uuid
+        evento_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ativa, cancelada]
+        criada_em:
+          type: string
+          format: date-time
+        cancelada_em:
+          type: string
+          format: date-time
+          nullable: true
+        checkin:
+          $ref: '#/components/schemas/Checkin'
+        certificado_disponivel:
+          type: boolean
+
+    Checkin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inscricao_id:
+          type: string
+          format: uuid
+        entrada:
+          type: string
+          format: date-time
+        saida:
+          type: string
+          format: date-time
+          nullable: true
+        percentual_presenca:
+          type: number
+          format: float
+          description: Calculado quando há saída registrada
+
+    NovaSessaoCheckin:
+      type: object
+      required: [tipo]
+      properties:
+        tipo:
+          type: string
+          enum: [ENTRADA, SAIDA]
+
+    SessaoCheckin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        evento_id:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum: [ENTRADA, SAIDA]
+        criada_em:
+          type: string
+          format: date-time
+        expira_em:
+          type: string
+          format: date-time
+          description: >
+            Fim da janela de check-in: `data_hora_fim` do evento mais a
+            tolerância configurada. Depois disso o endpoint de confirmação
+            responde 422. (Antes era "criação + 6 horas", o que deixava um
+            QR gerado de manhã ainda valendo à tarde.)
+
+    QrCodeSessao:
+      type: object
+      description: >
+        O QR da janela atual. Note que `png_base64` sozinho não basta: sem
+        `codigo_expira_em` a tela não saberia quando trocar, e passaria a
+        exibir um QR que a API já não aceita.
+      properties:
+        png_base64:
+          type: string
+          description: >
+            Imagem PNG do QR em Base64, pronta pra um
+            `src="data:image/png;base64,..."`.
+        codigo_expira_em:
+          type: string
+          format: date-time
+          description: >
+            Quando este QR deixa de ser aceito. A tela do admin busca o
+            próximo nesse instante.
+        sessao_expira_em:
+          type: string
+          format: date-time
+          description: >
+            Fim da janela de check-in do evento. Passou disso, não adianta
+            gerar outro QR.
+
+    ConfirmarCheckin:
+      type: object
+      required: [codigo]
+      properties:
+        codigo:
+          type: string
+          description: Parâmetro `c` da URL lida do QR code.
+          example: a3f19c2d4b
+
+    Pontuacao:
+      type: object
+      description: >
+        Pontuacao do aluno no WECTI. Sem recorte por semestre - ver a nota
+        sobre a remocao de Periodo no cabecalho deste arquivo.
+      properties:
+        pontos_total:
+          type: integer
+          description: >
+            O que vale no ranking: pontos_eventos + pontos_extras.
+        pontos_eventos:
+          type: integer
+          description: >
+            Soma dos pontos dos eventos com status "concluido", já
+            descontados os pontos perdidos nos eventos com status
+            "no_show" (mesmo valor de pontos do evento perdido).
+        pontos_extras:
+          type: integer
+          description: Soma dos lancamentos manuais do admin (gincanas).
+        extras:
+          type: array
+          description: >
+            Lancamentos com motivo e autor. Vao para a tela do aluno de
+            proposito: sem eles, ele ve o total mudar sem saber por que.
+          items:
+            $ref: '#/components/schemas/PontuacaoExtra'
+        eventos:
+          type: array
+          items:
+            type: object
+            properties:
+              evento_id:
+                type: string
+                format: uuid
+              titulo:
+                type: string
+              pontos:
+                type: integer
+              status:
+                type: string
+                enum: [concluido, no_show, cancelado]

@@ -1,0 +1,53 @@
+# =============================================================================
+# Duas coisas convivem neste diretorio:
+#
+#   home.html          landing publica do evento (HTML estatico)
+#   index.html         casca do sistema em React (login, eventos, check-in...)
+#
+# A landing e a porta de entrada do site; o sistema fica atras dos botoes
+# "Primeiro acesso" e "Login" dela.
+# =============================================================================
+
+# Quem abre o dominio raiz cai na landing, e nao no sistema. O index.html
+# continua listado depois: e ele que serve as rotas do React (regra abaixo),
+# e deixa-lo aqui garante que o site nao fique sem pagina inicial caso
+# home.html seja removido algum dia.
+DirectoryIndex home.html index.html
+
+# O sistema e uma aplicacao de pagina unica: as rotas (/eventos, /validar/...,
+# /checkin/confirmar/...) existem apenas no navegador, nao como arquivos no
+# servidor. Sem esta regra, abrir uma dessas URLs direto - que e exatamente
+# o que acontece quando alguem escaneia o QR code do check-in ou do
+# certificado - devolveria 404, porque o Apache procuraria um arquivo com
+# aquele nome.
+#
+# FallbackResource entrega o index.html para qualquer caminho que nao seja
+# um arquivo existente, e o roteador do navegador cuida do resto. Arquivos
+# reais (JS, CSS, imagens, a propria landing e as paginas dos palestrantes)
+# continuam sendo servidos normalmente.
+FallbackResource /index.html
+
+# Versoes antigas do Apache podem nao ter FallbackResource; o bloco abaixo
+# faz o mesmo com mod_rewrite e e ignorado se o modulo nao existir.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Rede de seguranca para o DirectoryIndex: se a hospedagem nao permitir
+  # aquela diretiva no .htaccess (depende de AllowOverride), a raiz ainda
+  # assim entrega a landing.
+  RewriteRule ^$ home.html [L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# As fotos do evento nao mudam depois de publicadas: um ano de cache evita
+# que cada visitante baixe a galeria inteira de novo a cada visita.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png  "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>

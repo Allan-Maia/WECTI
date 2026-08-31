@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+/*
+  Paleta extraida de ../style.css e ../index.html (landing page WECTI) -
+  os nomes usados la (--surface, --accent, --accent-light, --accent2,
+  --text-muted) foram remapeados aqui para um namespace mais generico
+  (bg/surface/surface-2/accent/accent-dim/accent-2/text/text-muted), mas
+  os valores hex sao os mesmos, extraidos direto do arquivo real (nao dos
+  nomes de variavel aproximados que vieram no pedido - a landing usa
+  #12121a/#1a1a28 pra surface e #e8e8f0/#888899 pra texto, por exemplo).
+*/
+@theme {
+  --color-bg: #0a0f0e;
+  --color-surface: #12121a;
+  --color-surface-2: #1a1a28;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-accent: #00e8c4;
+  --color-accent-dim: #00a88a;
+  --color-accent-2: #00d4b0;
+  --color-text: #e8e8f0;
+  --color-text-muted: #888899;
+
+  --radius-card: 12px;
+
+  --font-sans: 'Inter', sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Sem isso, o navegador desenha os controles nativos (date/time
+       picker, scrollbar, select) no tema claro do SO por padrao, o que
+       destoa muito do resto do site - com isso o popup de calendario/hora
+       do <input type="datetime-local"> (usado no formulario de Evento)
+       já nasce escuro, combinando com o resto. */
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+
+  /* Realca o icone de calendario/relogio do <input type="datetime-local">
+     com a cor de destaque do sistema, em vez do cinza padrao do SO. */
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(70%) sepia(70%) saturate(900%) hue-rotate(115deg) brightness(1.05);
+  }
+
+  input[type='datetime-local'] {
+    accent-color: var(--color-accent);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out;
+}
