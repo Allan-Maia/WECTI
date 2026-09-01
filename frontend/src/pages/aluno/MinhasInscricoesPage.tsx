@@ -14,7 +14,7 @@ import { formatarDataHora } from '../../utils/data';
 
 export default function MinhasInscricoesPage() {
   const { inscricoes, carregando, erro, recarregar } = useInscricoes('futuros');
-  const { eventos } = useEventos({});
+  const { eventos } = useEventos({ status: 'em_cartaz' });
   const { notificarSucesso, notificarErro } = useToast();
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
 
@@ -28,14 +28,14 @@ export default function MinhasInscricoesPage() {
       notificarSucesso('Inscrição cancelada.');
       recarregar();
     } catch (e) {
-      notificarErro(extrairMensagemErro(e, 'Não foi possível cancelar - o prazo pode ter passado.'));
+      notificarErro(extrairMensagemErro(e, 'Não foi possível cancelar - o evento pode já ter começado.'));
     } finally {
       setCancelandoId(null);
     }
   };
 
   return (
-    <PageContainer titulo="Minhas inscrições" descricao="Seus próximos eventos">
+    <PageContainer titulo="Minhas inscrições" descricao="Palestras em que você está inscrito">
       {carregando && <LoadingBlock mensagem="Carregando inscrições..." />}
       {!carregando && erro && <ErrorMessage mensagem={erro} onTentarNovamente={recarregar} />}
       {!carregando && !erro && inscricoes.length === 0 && (
@@ -59,6 +59,11 @@ export default function MinhasInscricoesPage() {
                     {evento ? formatarDataHora(evento.data_hora_inicio) : ''}
                     {evento?.local ? ` · ${evento.local}` : ''}
                   </p>
+                  {evento?.inscricoes_abertas && (
+                    <p className="mt-1 text-xs text-text-muted">
+                      Você pode cancelar até {formatarDataHora(evento.inscricoes_ate)}
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-text-muted">
                     {inscricao.checkin?.saida
                       ? 'Check-in e check-out confirmados'
@@ -68,15 +73,23 @@ export default function MinhasInscricoesPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {inscricao.status === 'ativa' && (
-                    <Button
-                      variante="danger"
-                      carregando={cancelandoId === inscricao.id}
-                      onClick={() => cancelar(inscricao.id)}
-                    >
-                      Cancelar
-                    </Button>
-                  )}
+                  {/* O cancelamento fecha quando o evento começa - mesma
+                      hora em que a inscrição fecha. Desabilitar aqui evita
+                      o clique que só serviria para receber um erro. */}
+                  {inscricao.status === 'ativa' &&
+                    (evento && !evento.inscricoes_abertas ? (
+                      <Button variante="outline" disabled title="O evento já começou">
+                        {evento.em_andamento ? 'Em andamento' : 'Já começou'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variante="danger"
+                        carregando={cancelandoId === inscricao.id}
+                        onClick={() => cancelar(inscricao.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    ))}
                 </div>
               </div>
             );

@@ -25,24 +25,40 @@ public class EventoService {
     private final PalestranteRepository palestranteRepository;
     private final InscricaoRepository inscricaoRepository;
     private final InscricaoService inscricaoService;
+    private final PrazoInscricao prazoInscricao;
 
     public EventoService(EventoRepository eventoRepository, PalestranteRepository palestranteRepository,
-                          InscricaoRepository inscricaoRepository, InscricaoService inscricaoService) {
+                          InscricaoRepository inscricaoRepository, InscricaoService inscricaoService,
+                          PrazoInscricao prazoInscricao) {
         this.eventoRepository = eventoRepository;
         this.palestranteRepository = palestranteRepository;
         this.inscricaoRepository = inscricaoRepository;
         this.inscricaoService = inscricaoService;
+        this.prazoInscricao = prazoInscricao;
+    }
+
+    /** Monta a resposta ja com o prazo de inscricao resolvido - unico
+     *  ponto que traduz Evento em EventoResponse. */
+    private EventoResponse responder(Evento evento, long inscritos) {
+        return EventoResponse.de(evento, inscritos,
+                prazoInscricao.estaAberto(evento), prazoInscricao.fechamento(evento));
     }
 
     public List<Evento> listar(String status) {
         List<Evento> eventos = eventoRepository.findAll();
 
-        LocalDateTime agora = LocalDateTime.now();
         if ("futuros".equals(status)) {
-            return eventos.stream().filter(e -> e.getDataHoraInicio().isAfter(agora)).toList();
+            return eventos.stream().filter(prazoInscricao::estaAberto).toList();
         }
         if ("encerrados".equals(status)) {
-            return eventos.stream().filter(e -> e.getDataHoraFim().isBefore(agora)).toList();
+            return eventos.stream().filter(Evento::isEncerrado).toList();
+        }
+        // "em_cartaz": tudo que ainda nao terminou - o que o aluno ve na
+        // tela de Eventos. Inclui o que esta acontecendo agora: sumir da
+        // lista na hora exata em que a palestra comeca faz o aluno achar
+        // que o evento foi cancelado.
+        if ("em_cartaz".equals(status)) {
+            return eventos.stream().filter(e -> !e.isEncerrado()).toList();
         }
         return eventos;
     }
@@ -62,13 +78,13 @@ public class EventoService {
         Map<UUID, Long> ocupacao = inscricaoService.inscritosAtivosPorEvento(
                 eventos.stream().map(Evento::getId).toList());
         return eventos.stream()
-                .map(e -> EventoResponse.de(e, ocupacao.getOrDefault(e.getId(), 0L)))
+                .map(e -> responder(e, ocupacao.getOrDefault(e.getId(), 0L)))
                 .toList();
     }
 
     public EventoResponse detalharComVagas(UUID id) {
         Evento evento = buscarPorId(id);
-        return EventoResponse.de(evento, inscricaoService.inscritosAtivos(id));
+        return responder(evento, inscricaoService.inscritosAtivos(id));
     }
 
     public EventoResponse criar(NovoEventoRequest request) {
@@ -83,7 +99,7 @@ public class EventoService {
                 .capacidade(request.capacidade())
                 .palestrantes(buscarPalestrantes(request.palestranteIds()))
                 .build();
-        return EventoResponse.de(eventoRepository.save(evento), 0L);
+        return responder(eventoRepository.save(evento), 0L);
     }
 
     public EventoResponse atualizar(UUID id, NovoEventoRequest request) {
@@ -100,7 +116,7 @@ public class EventoService {
         evento.setPontos(request.pontos());
         evento.setCapacidade(request.capacidade());
         evento.setPalestrantes(buscarPalestrantes(request.palestranteIds()));
-        return EventoResponse.de(eventoRepository.save(evento), inscritos);
+        return responder(eventoRepository.save(evento), inscritos);
     }
 
     /**

@@ -12,7 +12,11 @@ import { extrairMensagemErro } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
 export default function EventosPage() {
-  const { eventos, carregando, erro, recarregar } = useEventos({ status: 'futuros' });
+  // "em_cartaz" = tudo que ainda não terminou, inclusive o que está
+  // acontecendo agora. Antes a tela pedia só os que ainda não tinham
+  // começado, e a palestra sumia da lista na hora exata em que começava -
+  // o aluno achava que tinha sido cancelada.
+  const { eventos, carregando, erro, recarregar } = useEventos({ status: 'em_cartaz' });
   const { inscricoes, recarregar: recarregarInscricoes } = useInscricoes();
   const { notificarSucesso, notificarErro } = useToast();
   const [inscrevendoId, setInscrevendoId] = useState<string | null>(null);
@@ -37,11 +41,11 @@ export default function EventosPage() {
   };
 
   return (
-    <PageContainer titulo="Eventos" descricao="Palestras e eventos abertos para inscrição">
+    <PageContainer titulo="Eventos" descricao="Palestras do WECTI - as inscrições fecham pouco depois de cada evento começar">
       {carregando && <LoadingBlock mensagem="Carregando eventos..." />}
       {!carregando && erro && <ErrorMessage mensagem={erro} onTentarNovamente={recarregar} />}
       {!carregando && !erro && eventos.length === 0 && (
-        <EmptyState titulo="Nenhum evento disponível" descricao="Ainda não há eventos futuros abertos para inscrição." icone="🗓️" />
+        <EmptyState titulo="Nenhum evento disponível" descricao="Ainda não há palestras cadastradas." icone="🗓️" />
       )}
       {!carregando && !erro && eventos.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -50,9 +54,20 @@ export default function EventosPage() {
               key={evento.id}
               evento={evento}
               acao={
+                // A ordem importa: "Inscrito" tem que vencer os outros
+                // estados, senão o aluno que já está inscrito numa palestra
+                // em andamento veria "Inscrições encerradas" e acharia que
+                // ficou de fora.
                 jaInscrito(evento.id) ? (
                   <Button variante="outline" disabled className="w-full">
                     Inscrito
+                  </Button>
+                ) : !evento.inscricoes_abertas ? (
+                  // O evento continua na lista depois de começar - o aluno
+                  // precisa saber que ele existe e está rolando, mesmo sem
+                  // poder mais entrar.
+                  <Button variante="outline" disabled className="w-full">
+                    {evento.em_andamento ? 'Já começou' : 'Inscrições encerradas'}
                   </Button>
                 ) : evento.lotado ? (
                   // Continua visível, e não escondido: o aluno precisa

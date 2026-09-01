@@ -14,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -45,16 +44,23 @@ class InscricaoServiceVagasTest {
 
     private static final UUID ALUNO_ID = UUID.randomUUID();
     private static final UUID EVENTO_ID = UUID.randomUUID();
+    /** Mesmo padrao de producao (app.inscricao.tolerancia-apos-inicio-minutos). */
+    private static final long TOLERANCIA_MINUTOS = 15;
 
     @Mock private InscricaoRepository inscricaoRepository;
     @Mock private EventoRepository eventoRepository;
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private CheckinRepository checkinRepository;
 
-    @InjectMocks private InscricaoService inscricaoService;
+    private InscricaoService inscricaoService;
 
     @BeforeEach
     void preparar() {
+        // PrazoInscricao de verdade, com a folga real de 15 minutos: e a
+        // regra que decide quem entra, entao mocka-la esvaziaria os testes
+        // que dependem dela.
+        inscricaoService = new InscricaoService(inscricaoRepository, eventoRepository,
+                usuarioRepository, checkinRepository, new PrazoInscricao(TOLERANCIA_MINUTOS));
         when(usuarioRepository.findById(ALUNO_ID))
                 .thenReturn(Optional.of(Usuario.builder().id(ALUNO_ID).nome("Aluno").build()));
         when(inscricaoRepository.save(any(Inscricao.class))).thenAnswer(i -> i.getArgument(0));
@@ -170,6 +176,61 @@ class InscricaoServiceVagasTest {
         assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, ALUNO_ID))
                 .isInstanceOf(ConflitoException.class)
                 .hasMessageContaining("ja possui inscricao");
+    }
+
+    @Test
+    @DisplayName("inscreve em evento de HOJE, ate a hora de comecar")
+    void inscreveEmEventoDeHoje() {
+        Evento daquiAPouco = Evento.builder()
+                .id(EVENTO_ID)
+                .titulo("Palestra de hoje a noite")
+                .dataHoraInicio(LocalDateTime.now().plusMinutes(30))
+                .dataHoraFim(LocalDateTime.now().plusHours(3))
+                .pontos(100)
+                .build();
+        when(eventoRepository.travarParaInscricao(EVENTO_ID.toString())).thenReturn(Optional.of(daquiAPouco));
+        when(inscricaoRepository.countByEventoIdAndStatus(EVENTO_ID, InscricaoStatus.ATIVA)).thenReturn(0L);
+
+        assertThat(inscricaoService.inscrever(EVENTO_ID, ALUNO_ID))
+                .as("evento marcado para hoje precisa aceitar inscricao ate a hora de comecar")
+                .isNotNull();
+    }
+
+    /** Palestra que ja comecou ha {@code minutos}, e dura 2 horas. */
+    private void eventoComecadoHa(long minutos) {
+        Evento evento = Evento.builder()
+                .id(EVENTO_ID)
+                .titulo("Palestra acontecendo agora")
+                .dataHoraInicio(LocalDateTime.now().minusMinutes(minutos))
+                .dataHoraFim(LocalDateTime.now().plusHours(2))
+                .pontos(100)
+                .build();
+        when(eventoRepository.travarParaInscricao(EVENTO_ID.toString())).thenReturn(Optional.of(evento));
+        when(inscricaoRepository.countByEventoIdAndStatus(EVENTO_ID, InscricaoStatus.ATIVA)).thenReturn(0L);
+    }
+
+    @Test
+    @DisplayName("aluno atrasado ainda entra: dentro da folga apos o inicio")
+    void aceitaAlunoAtrasadoDentroDaFolga() {
+        eventoComecadoHa(TOLERANCIA_MINUTOS - 5);
+
+        assertThat(inscricaoService.inscrever(EVENTO_ID, ALUNO_ID))
+                .as("quem chega alguns minutos atrasado esta na sala - barrar aqui o "
+                        + "impediria de fazer check-in e pontuar numa palestra que assistiu")
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("passada a folga, a inscricao fecha - e nao no fim do evento")
+    void recusaDepoisDaFolga() {
+        eventoComecadoHa(TOLERANCIA_MINUTOS + 5);
+
+        assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, ALUNO_ID))
+                .as("antes o limite era o FIM do evento, e dava para entrar no ultimo minuto da palestra")
+                .isInstanceOf(RegraNegocioException.class)
+                .hasMessageContaining("ja fecharam");
+
+        verify(inscricaoRepository, never()).save(any());
     }
 
     @Test

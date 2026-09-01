@@ -60,6 +60,15 @@ export interface Evento {
    *  tela precise lembrar do caso "sem limite" na hora de subtrair. */
   vagas_restantes: number | null;
   lotado: boolean;
+  /** Se ainda dá para se inscrever (ou cancelar): vale até pouco depois
+   *  do início do evento (há uma folga para quem chega atrasado). Vem
+   *  pronto da API para que nenhuma tela recalcule a regra por conta e
+   *  fique fora de sincronia - já mudou duas vezes. */
+  inscricoes_abertas: boolean;
+  /** Instante exato em que as inscrições fecham. */
+  inscricoes_ate: string;
+  em_andamento: boolean;
+  encerrado: boolean;
   palestrantes: Palestrante[];
 }
 

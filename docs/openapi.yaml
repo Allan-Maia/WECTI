@@ -2,7 +2,9 @@
 # WECTI - Rascunho do contrato de API
 # =============================================================================
 # Regras de negocio aplicadas neste contrato (resumo - confirmar com o time):
-#   - Cancelamento de inscricao permitido até 1 dia antes do inicio do evento.
+#   - Inscricao e cancelamento fecham juntos, 15 min APOS o inicio do
+#     evento (folga para quem chega atrasado - ver PrazoInscricao).
+#     Antes: cancelamento ate 1 dia antes, inscricao ate o fim do evento.
 #   - Penalizacao (no-show) se o aluno NAO cancelou E NAO fez check-in.
 #   - Certificado exige check-in + check-out + permanencia >= 75% da duracao
 #     do evento (calculada a partir de data_hora_inicio/data_hora_fim).
@@ -364,10 +366,15 @@ paths:
       parameters:
         - name: status
           in: query
-          description: Filtra por eventos futuros ou já encerrados
+          description: >
+            "futuros" = ainda aceitam inscrição;
+            "em_cartaz" = ainda não terminaram, incluindo o que está
+            acontecendo agora — é o que a tela do aluno usa, para a
+            palestra não sumir da lista no instante em que começa;
+            "encerrados" = já terminaram. Sem o parâmetro, devolve todos.
           schema:
             type: string
-            enum: [futuros, encerrados]
+            enum: [futuros, em_cartaz, encerrados]
       responses:
         '200':
           description: Lista de eventos
@@ -452,6 +459,14 @@ paths:
     post:
       tags: [Inscricoes]
       summary: Aluno se inscreve no evento
+      description: >
+        Permitido até `inscricoes_ate` (início do evento + folga de 15
+        min para quem chega atrasado) — o mesmo limite do cancelamento.
+        Depois disso retorna 422.
+
+
+        Um aluno que já cancelou e mudou de ideia reaproveita a própria
+        inscrição (volta a ficar ATIVA), desde que ainda haja vaga.
       responses:
         '201':
           description: Inscrição criada
@@ -481,7 +496,11 @@ paths:
       parameters:
         - name: status
           in: query
-          description: Filtra entre eventos futuros e histórico
+          description: >
+            "futuros" = inscrições ativas em eventos que ainda não
+            terminaram (inclui o que está acontecendo agora, momento em
+            que o aluno precisa da tela para fazer o check-in);
+            "historico" = canceladas ou de eventos já encerrados.
           schema:
             type: string
             enum: [futuros, historico]
@@ -517,14 +536,15 @@ paths:
       tags: [Inscricoes]
       summary: Cancela a inscrição
       description: >
-        Só permitido até 1 dia antes do início do evento. Depois desse
-        prazo, retorna 422 e a inscrição passa a contar como no-show se o
-        aluno não fizer check-in.
+        Permitido até `inscricoes_ate` (início do evento + folga de 15
+        min) - o mesmo limite da inscrição. Depois disso retorna 422, e a
+        inscrição passa a contar como no-show se o aluno não fizer
+        check-in.
       responses:
         '204':
           description: Inscrição cancelada
         '422':
-          description: Prazo de cancelamento (1 dia antes do evento) já passou
+          description: O evento já começou - não é mais possível cancelar
 
   # ---------------------------------------------------------------------
   # Checkins - por SESSAO de evento (nao mais por aluno)
@@ -1092,6 +1112,25 @@ components:
             proposito - se cada tela fizesse a propria subtracao, uma
             delas acabaria esquecendo do caso "sem limite".
         lotado:
+          type: boolean
+        inscricoes_abertas:
+          type: boolean
+          description: >
+            Se ainda da para se inscrever (e cancelar): vale ate
+            `inscricoes_ate`. Vem pronto da API de proposito - a regra ja
+            mudou duas vezes, e uma tela que a recalculasse por conta
+            ficaria fora de sincronia com o backend.
+        inscricoes_ate:
+          type: string
+          format: date-time
+          description: >
+            Instante em que inscricao e cancelamento fecham: o inicio do
+            evento mais a folga configurada para quem chega atrasado
+            (padrao 15 minutos, app.inscricao.tolerancia-apos-inicio-minutos).
+        em_andamento:
+          type: boolean
+          description: Ja comecou e ainda nao terminou
+        encerrado:
           type: boolean
         palestrantes:
           type: array

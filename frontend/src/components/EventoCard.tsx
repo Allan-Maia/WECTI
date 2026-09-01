@@ -71,6 +71,14 @@ export default function EventoCard({ evento, acao }: Props) {
           </span>
         )}
         <VagasDoEvento evento={evento} />
+        {/* Só aparece enquanto dá para agir. Mostrar o prazo depois de
+            fechado é informação morta - o botão já diz o que aconteceu. */}
+        {evento.inscricoes_abertas && (
+          <span className="flex items-center gap-2">
+            <span aria-hidden>⏳</span>
+            Inscrições até {formatarDataHora(evento.inscricoes_ate)}
+          </span>
+        )}
       </div>
 
       {acao && <div className="mt-2 flex gap-2">{acao}</div>}

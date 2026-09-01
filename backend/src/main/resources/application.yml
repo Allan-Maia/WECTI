@@ -39,6 +39,18 @@ app:
   # Configure FRONTEND_URL com o dominio real assim que o frontend for
   # publicado.
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  inscricao:
+    # Folga depois do horario de inicio em que o aluno ainda consegue se
+    # inscrever (e cancelar). Existe para quem chega atrasado: sem ela,
+    # quem aparece 5 minutos depois do comeco nao se inscreve, logo nao
+    # faz check-in, logo nao pontua - ficaria de fora de uma palestra em
+    # que esta presente.
+    #
+    # NAO passe de 30 minutos sem mexer tambem em
+    # app.checkin.tolerancia-antes-minutos: o check-in abre 30 min antes
+    # do inicio, e uma folga maior deixaria o aluno se inscrever num
+    # evento em que ja nao consegue confirmar presenca.
+    tolerancia-apos-inicio-minutos: ${INSCRICAO_TOLERANCIA_MINUTOS:15}
   checkin:
     # De quanto em quanto tempo o codigo embutido no QR de check-in muda
     # (ver CodigoRotativoCheckin). O QR e o mesmo pra sala inteira, entao

@@ -44,9 +44,32 @@ confirmar de novo.
 
 ## Regras de negócio já fechadas (não inventar alternativa)
 
-- **Cancelamento**: o aluno pode cancelar a inscrição até 1 dia antes do
-  início do evento. Depois disso, conta como no-show se não houver
-  check-in.
+- **Inscrição e cancelamento fecham juntos, 15 minutos depois do início
+  do evento.** Até lá o aluno pode entrar e sair livremente; a partir daí,
+  nem uma coisa nem outra. Quem ficou inscrito e não apareceu conta como
+  no-show.
+
+  A folga de 15 minutos é para quem chega atrasado: sem ela, quem aparece
+  5 minutos depois do começo não se inscreve, logo não faz check-in, logo
+  não pontua — ficaria de fora de uma palestra em que está presente.
+  Configurável em `app.inscricao.tolerancia-apos-inicio-minutos`, mas
+  **não passe de 30 minutos** sem mexer também em
+  `app.checkin.tolerancia-antes-minutos`: o check-in abre 30 min antes do
+  início, e uma folga maior deixaria o aluno se inscrever num evento em
+  que já não consegue confirmar presença.
+
+  > Antes o cancelamento era "até 1 dia antes" e a inscrição ia até o
+  > **fim** do evento — dois prazos diferentes, e nenhum deles fazia
+  > sentido. O de 1 dia tornava impossível desistir de uma palestra
+  > marcada para o mesmo dia; o outro deixava alguém se inscrever no meio
+  > da palestra (ou depois dela, levando no-show na hora). O professor
+  > pediu a mudança ao testar o sistema no ar, em setembro de 2026, e
+  > pediu a folga para retardatários logo em seguida.
+  >
+  > Fechando os dois no mesmo instante, o incentivo fica certo: quem não
+  > vai mais, cancela e devolve a vaga; quem não cancelar, perde os
+  > pontos. A regra vive em `PrazoInscricao` — um lugar só, usado pela
+  > inscrição, pelo cancelamento e pelo que a tela mostra.
 - **No-show**: penaliza apenas quem NÃO cancelou E NÃO fez check-in.
 - **Certificado**: exige check-in + check-out + permanência >= 75% da
   duração do evento (`data_hora_fim - data_hora_inicio`). Ver o método

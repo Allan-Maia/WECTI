@@ -2,7 +2,14 @@ import api from './api';
 import type { Evento, NovoEvento } from '../types';
 
 export interface FiltroEventos {
-  status?: 'futuros' | 'encerrados';
+  /**
+   * `futuros` — ainda aceitam inscrição (não começaram).
+   * `em_cartaz` — ainda não terminaram, incluindo o que está acontecendo
+   *   agora. É o que a tela do aluno usa: sem isso a palestra sumia da
+   *   lista no instante em que começava.
+   * `encerrados` — já terminaram.
+   */
+  status?: 'futuros' | 'em_cartaz' | 'encerrados';
 }
 
 export function listarEventos(filtro: FiltroEventos = {}) {

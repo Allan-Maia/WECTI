@@ -11,6 +11,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -67,6 +68,22 @@ public class Evento {
      */
     @Column
     private Integer capacidade;
+
+    // O prazo de inscricao/cancelamento NAO fica aqui: depende de
+    // configuracao (a folga para quem chega atrasado) e vive em
+    // PrazoInscricao. Abaixo ficam so fatos de tempo do proprio evento.
+
+    /** Ja comecou e ainda nao terminou. */
+    @Transient
+    public boolean isEmAndamento() {
+        LocalDateTime agora = LocalDateTime.now();
+        return !agora.isBefore(dataHoraInicio) && agora.isBefore(dataHoraFim);
+    }
+
+    @Transient
+    public boolean isEncerrado() {
+        return !LocalDateTime.now().isBefore(dataHoraFim);
+    }
 
     /**
      * EAGER de proposito: o controller mapeia Evento -> EventoResponse

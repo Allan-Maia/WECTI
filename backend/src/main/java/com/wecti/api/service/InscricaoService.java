@@ -33,13 +33,16 @@ public class InscricaoService {
     private final EventoRepository eventoRepository;
     private final UsuarioRepository usuarioRepository;
     private final CheckinRepository checkinRepository;
+    private final PrazoInscricao prazoInscricao;
 
     public InscricaoService(InscricaoRepository inscricaoRepository, EventoRepository eventoRepository,
-                             UsuarioRepository usuarioRepository, CheckinRepository checkinRepository) {
+                             UsuarioRepository usuarioRepository, CheckinRepository checkinRepository,
+                             PrazoInscricao prazoInscricao) {
         this.inscricaoRepository = inscricaoRepository;
         this.eventoRepository = eventoRepository;
         this.usuarioRepository = usuarioRepository;
         this.checkinRepository = checkinRepository;
+        this.prazoInscricao = prazoInscricao;
     }
 
     /**
@@ -58,12 +61,15 @@ public class InscricaoService {
         Usuario aluno = usuarioRepository.findById(alunoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario nao encontrado: " + alunoId));
 
-        // Inscrever-se em evento encerrado nao e so inutil: a pontuacao
-        // trata "inscrito e sem check-in em evento que ja acabou" como
-        // no-show, entao o aluno levaria uma penalidade por um evento que
-        // nunca teve chance de assistir.
-        if (!evento.getDataHoraFim().isAfter(LocalDateTime.now())) {
-            throw new RegraNegocioException("Este evento ja terminou - nao e mais possivel se inscrever");
+        // A inscricao fecha logo apos o inicio do evento (ver
+        // PrazoInscricao - ha uma folga para quem chega atrasado). Antes
+        // o limite era o FIM do evento, o que deixava se inscrever num
+        // evento ja encerrado e levar no-show na hora, por uma palestra
+        // que nunca houve chance de assistir.
+        if (!prazoInscricao.estaAberto(evento)) {
+            throw new RegraNegocioException(evento.isEncerrado()
+                    ? "Este evento ja terminou."
+                    : "As inscricoes para este evento ja fecharam.");
         }
 
         var existente = inscricaoRepository.findByAlunoIdAndEventoId(alunoId, eventoId);
@@ -126,10 +132,14 @@ public class InscricaoService {
             throw new RegraNegocioException("Inscricao ja esta cancelada");
         }
 
-        LocalDateTime prazoLimite = inscricao.getEvento().getDataHoraInicio().minusDays(1);
-        if (!LocalDateTime.now().isBefore(prazoLimite)) {
+        // Cancelamento fecha junto com a inscricao. O prazo anterior era
+        // "1 dia antes", o que tornava impossivel desistir de um evento
+        // marcado para o mesmo dia. Fechando os dois no mesmo instante,
+        // enquanto da para entrar tambem da para sair - e quem desiste
+        // devolve a vaga para outro.
+        if (!prazoInscricao.estaAberto(inscricao.getEvento())) {
             throw new RegraNegocioException(
-                    "Prazo de cancelamento (1 dia antes do evento) ja passou");
+                    "O prazo para cancelar esta inscricao ja passou.");
         }
 
         inscricao.setStatus(InscricaoStatus.CANCELADA);
@@ -156,17 +166,20 @@ public class InscricaoService {
 
     public List<Inscricao> listarDoAluno(UUID alunoId, String status) {
         List<Inscricao> inscricoes = inscricaoRepository.findByAlunoId(alunoId);
-        LocalDateTime agora = LocalDateTime.now();
+        // "futuros" = inscricao ativa em evento que ainda nao terminou.
+        // Antes o corte era o INICIO do evento, e a inscricao sumia de
+        // "Minhas inscricoes" no instante em que a palestra comecava -
+        // justamente quando o aluno precisa dela na tela para fazer o
+        // check-in. As duas listas continuam complementares: o que sai
+        // daqui aparece no historico.
         if ("futuros".equals(status)) {
             return inscricoes.stream()
-                    .filter(i -> i.getStatus() == InscricaoStatus.ATIVA
-                            && i.getEvento().getDataHoraInicio().isAfter(agora))
+                    .filter(i -> i.getStatus() == InscricaoStatus.ATIVA && !i.getEvento().isEncerrado())
                     .toList();
         }
         if ("historico".equals(status)) {
             return inscricoes.stream()
-                    .filter(i -> i.getStatus() == InscricaoStatus.CANCELADA
-                            || !i.getEvento().getDataHoraInicio().isAfter(agora))
+                    .filter(i -> i.getStatus() == InscricaoStatus.CANCELADA || i.getEvento().isEncerrado())
                     .toList();
         }
         return inscricoes;
