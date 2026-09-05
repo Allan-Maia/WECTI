@@ -551,9 +551,11 @@ section { padding: 6rem 2rem; }
 .palestrantes-header { text-align: center; margin-bottom: 5rem; }
 .palestrantes-header .section-desc { max-width: 520px; }
 
+/* Tres colunas porque sao nove palestrantes - fecha 3x3 certinho. Com
+   quatro colunas a ultima linha ficava com um card solto e esticado. */
 .palestrantes-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
   align-items: stretch;
 }
