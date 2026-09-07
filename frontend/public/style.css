@@ -62,7 +62,11 @@ nav {
 }
 .nav-links {
   display: flex;
-  gap: 2rem;
+  align-items: center;
+  /* 1.5rem, e nao 2rem: com o item "Inscricoes" sao seis links mais os
+     dois botoes de acesso, e no gap antigo o menu encostava no logo por
+     volta de 950px de largura. */
+  gap: 1.5rem;
   list-style: none;
 }
 .nav-links a {
@@ -614,14 +618,6 @@ section { padding: 6rem 2rem; }
   width: 100%;
   flex-grow: 1;
 }
-.palestrante-quando {
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--accent-light);
-  margin-top: 1rem;
-}
-
 @media (max-width: 900px) {
   .palestrantes-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
 }
@@ -671,7 +667,9 @@ section { padding: 6rem 2rem; }
   margin-bottom: 1.5rem;
 }
 
-/* Tema / dia / horario: uma linha so no desktop, empilhado no celular. */
+/* So o tema. Dia, horario e local saem do sistema (tela de Eventos), nao
+   daqui - repetir a agenda numa pagina estatica so criava divergencia
+   quando a organizacao remarcava alguma palestra. */
 .palestrante-meta {
   display: flex;
   flex-wrap: wrap;
@@ -706,6 +704,145 @@ section { padding: 6rem 2rem; }
   .palestrante-detalhe h2 { text-align: center; }
   .palestrante-meta { justify-content: center; }
   .palestrante-bio p { text-align: left; }
+}
+
+/* ──────────────────────────────────────────
+   PAGINA DE INSCRICOES
+────────────────────────────────────────── */
+/* O formulario de inscricao mora dentro de cada PDF, entao este aviso
+   evita o aluno abrir o regulamento e nao achar onde se inscrever. */
+.inscricoes-aviso {
+  max-width: 720px;
+  margin: 0 0 3rem;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid var(--accent2);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: rgba(0,212,176,0.06);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.inscricoes-aviso em { color: #fff; font-style: normal; font-weight: 600; }
+
+/* Lista em coluna unica, nao grade: cada atividade tem texto demais para
+   caber num card estreito, e assim o aluno le de cima a baixo. */
+.inscricoes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.inscricao-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2.5rem;
+  align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.inscricao-card:hover { border-color: var(--accent2); transform: translateY(-3px); }
+
+.inscricao-titulo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.6rem;
+}
+.inscricao-resumo {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+
+/* Os fatos do regulamento viram etiquetas: da para bater o olho e ver se
+   a atividade cabe na sua agenda antes de abrir o PDF. */
+.inscricao-fatos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin-top: 1.1rem;
+}
+.inscricao-fatos li {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+}
+.inscricao-destaque {
+  margin-top: 1.1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
+.inscricao-acao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.inscricao-acao .btn-primary { white-space: nowrap; }
+.inscricao-arquivo {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Regra unica para as cinco atividades - fica no fim da pagina em vez de
+   repetida dentro de cada card. */
+.inscricoes-pontuacao {
+  margin-top: 3.5rem;
+  padding: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.inscricoes-pontuacao h2 {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+.pontuacao-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+.pontuacao-grid > div { display: flex; flex-direction: column; gap: 0.35rem; }
+.pontuacao-grid strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-light);
+}
+.pontuacao-grid span { font-size: 0.8125rem; line-height: 1.6; color: var(--text-muted); }
+.pontuacao-obs {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+@media (max-width: 860px) {
+  .pontuacao-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 700px) {
+  /* O botao desce para baixo do texto e ocupa a largura toda - alvo de
+     toque decente no celular. */
+  .inscricao-card { grid-template-columns: 1fr; gap: 1.5rem; padding: 1.5rem; }
+  .inscricao-acao { align-items: stretch; }
+  .inscricao-acao .btn-primary { text-align: center; }
+  .inscricao-arquivo { text-align: center; }
+  .pontuacao-grid { grid-template-columns: 1fr; }
 }
 
 /* ──────────────────────────────────────────
@@ -757,11 +894,9 @@ footer {
 /* ──────────────────────────────────────────
    RESPONSIVE
 ────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .about-grid { grid-template-columns: 1fr; gap: 3rem; }
-  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
-  .gallery-item.wide { grid-column: span 2; }
-  .gallery-item.tall { grid-row: span 1; aspect-ratio: 4/3; }
+/* O menu vira hamburger antes do resto do layout (1000px, nao 900px):
+   sao oito itens na barra e eles ficam sem espaco primeiro. */
+@media (max-width: 1000px) {
   .nav-links { display: none; }
   .nav-links.open {
     display: flex;
@@ -778,6 +913,13 @@ footer {
      vertical, que so faz sentido com os links lado a lado. */
   .nav-acesso:first-of-type { margin-left: 0; padding-left: 0; border-left: none; }
   .nav-links.open .nav-cta, .nav-links.open .nav-ghost { display: inline-block; text-align: center; }
+}
+
+@media (max-width: 900px) {
+  .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+  .gallery-item.wide { grid-column: span 2; }
+  .gallery-item.tall { grid-row: span 1; aspect-ratio: 4/3; }
   .hero-stats { gap: 2rem; }
   .hero-content { grid-template-columns: 1fr; }
   .hero-visual { display: none; }

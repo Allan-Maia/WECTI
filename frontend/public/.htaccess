@@ -14,6 +14,11 @@
 # home.html seja removido algum dia.
 DirectoryIndex home.html index.html
 
+# Sem isto, abrir /fotos/ ou /inscricoes/ direto no navegador devolve a
+# listagem do diretorio. Sao arquivos publicos, mas a pagina de listagem
+# nao faz parte do site e nao ha motivo para ela existir.
+Options -Indexes
+
 # O sistema e uma aplicacao de pagina unica: as rotas (/eventos, /validar/...,
 # /checkin/confirmar/...) existem apenas no navegador, nao como arquivos no
 # servidor. Sem esta regra, abrir uma dessas URLs direto - que e exatamente
