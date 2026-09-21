@@ -227,7 +227,7 @@ variável substitui o padrão inteiro.
 | `RATE_LIMIT_MAX_FALHAS` | `10` (padrão) | Tentativas de login com senha errada antes de bloquear o IP |
 | `RATE_LIMIT_JANELA_MINUTOS` | `15` (padrão) | Duração do bloqueio |
 | `CHECKIN_JANELA_CODIGO_SEGUNDOS` | `60` (padrão) | De quanto em quanto tempo o QR de check-in se renova |
-| `CHECKIN_TOLERANCIA_ANTES_MINUTOS` | `30` (padrão) | Quanto antes do evento o check-in já abre |
+| `CHECKIN_TOLERANCIA_ANTES_MINUTOS` | `60` (padrão) | Quanto antes do evento o admin já consegue gerar e projetar o QR |
 | `CHECKIN_TOLERANCIA_DEPOIS_MINUTOS` | `30` (padrão) | Quanto depois do fim o check-out ainda é aceito |
 
 Sobre a renovação do QR: ele é o mesmo para a sala inteira — está
