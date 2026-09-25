@@ -226,21 +226,31 @@ variável substitui o padrão inteiro.
 | `SPRINGDOC_ENABLED` | `false` | Desliga a documentação interativa da API (`/docs` e `/api-docs`). Não há motivo para deixar o mapa dos endpoints aberto ao público |
 | `RATE_LIMIT_MAX_FALHAS` | `10` (padrão) | Tentativas de login com senha errada antes de bloquear o IP |
 | `RATE_LIMIT_JANELA_MINUTOS` | `15` (padrão) | Duração do bloqueio |
-| `CHECKIN_JANELA_CODIGO_SEGUNDOS` | `60` (padrão) | De quanto em quanto tempo o QR de check-in se renova |
+| `CHECKIN_JANELA_CODIGO_SEGUNDOS` | `900` (padrão) | De quanto em quanto tempo o QR de check-in se renova (15 min) |
 | `CHECKIN_TOLERANCIA_ANTES_MINUTOS` | `60` (padrão) | Quanto antes do evento o admin já consegue gerar e projetar o QR |
 | `CHECKIN_TOLERANCIA_DEPOIS_MINUTOS` | `30` (padrão) | Quanto depois do fim o check-out ainda é aceito |
 
 Sobre a renovação do QR: ele é o mesmo para a sala inteira — está
-projetado, não há como ser individual. Para que uma foto da tela não
-sirva para quem não veio, o link embutido carrega um código que vale só
-por uma janela curta, e a tela do admin busca o QR seguinte sozinha. Um
-print mandado no grupo vence junto com a janela em que foi tirado.
+projetado, não há como ser individual. O link embutido carrega um código
+que vale por uma janela de tempo, e a tela do admin busca o QR seguinte
+sozinha.
 
-Diminuir `CHECKIN_JANELA_CODIGO_SEGUNDOS` aperta o cerco; aumentar dá
-mais folga para quem escaneou e ainda precisou fazer login antes de
-confirmar. A janela anterior também é aceita, então na prática o código
-vale entre uma e duas janelas. **Não deixe abaixo de uns 30 segundos** —
-abaixo disso, aluno com internet ruim começa a perder check-in legítimo.
+**A janela é de 15 minutos** (setembro de 2026, a pedido do professor).
+Eram 60 segundos, e o aluno tinha um minuto entre fotografar a tela e
+confirmar — quem precisava fazer login no meio levava "Este QR code já
+mudou" num check-in legítimo. Como a janela anterior também é aceita, o
+código vale na prática de 15 a 30 minutos; **15 é o mínimo garantido**.
+
+Isso deixou de ser uma defesa contra compartilhamento: o professor
+decidiu não tentar controlar quem repassa foto do QR. A rotação continua
+porque custa zero e limita o estrago de um link vazado, mas quem fecha a
+porta de verdade é a sessão, que expira 30 minutos depois do fim da
+palestra.
+
+A tela do admin **precisa ficar aberta** para renovar o QR. Fechada, o
+QR projetado congela e para de ser aceito ao fim da janela seguinte —
+com 15 minutos isso dá bem mais margem do que davam os 60 segundos, o
+que importa porque o QR pode ser gerado até 1 hora antes do início.
 
 As tolerâncias existem porque a sessão de check-in agora vale pelo
 horário do próprio evento, e não mais por 6 horas a partir de quando foi
