@@ -102,12 +102,28 @@ app:
     # deste teto - e premiacao, nao pontuacao de palestra.
     limite-eventos: ${PONTUACAO_LIMITE_EVENTOS:2000}
   rate-limit:
-    # Trava forca bruta nas rotas de autenticacao
-    # (ver RateLimitAutenticacaoFilter). Conta apenas tentativas que
-    # FALHAM: numa palestra a turma toda sai pelo mesmo IP do Wi-Fi do
-    # campus, e somar acessos bem-sucedidos bloquearia alunos legitimos.
+    # Trava forca bruta no login e no "esqueci minha senha". O limite e
+    # por CONTA (ver LimiteTentativasPorConta), nao por IP.
+    #
+    # Era por IP ate 28/09/2026 e derrubou o primeiro dia da WECTI: a
+    # turma inteira sai pelo mesmo IP do Wi-Fi do campus, entao dez
+    # alunos errando a propria senha bloqueavam todos os outros - e o
+    # bloqueio pegava tambem o "esqueci minha senha", entao quem tentava
+    # se recuperar ficava preso. 42 alunos afetados. O comentario que
+    # ficava aqui dizia que contar so as falhas resolvia esse cenario;
+    # nao resolvia.
+    #
+    # Quantas falhas seguidas NA MESMA CONTA ate ela esperar.
     max-falhas: ${RATE_LIMIT_MAX_FALHAS:10}
-    janela-minutos: ${RATE_LIMIT_JANELA_MINUTOS:15}
+    # Serve para DUAS coisas: e o prazo em que as falhas se somam e,
+    # depois de estourar, quanto tempo a conta fica esperando.
+    #
+    # 2 minutos, e nao 15: num evento, 15 minutos de espera valem o
+    # mesmo que nao conseguir entrar - o aluno perde a palestra. Dois
+    # minutos seguram quem esta martelando senha sem punir quem so se
+    # atrapalhou. O contador tambem zera sozinho quando a pessoa
+    # acerta a senha (ver LimiteTentativasPorConta).
+    janela-minutos: ${RATE_LIMIT_JANELA_MINUTOS:2}
 
 spring:
   application:

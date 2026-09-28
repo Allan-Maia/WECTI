@@ -224,8 +224,8 @@ variável substitui o padrão inteiro.
 | Variável | Valor sugerido | Por quê |
 |---|---|---|
 | `SPRINGDOC_ENABLED` | `false` | Desliga a documentação interativa da API (`/docs` e `/api-docs`). Não há motivo para deixar o mapa dos endpoints aberto ao público |
-| `RATE_LIMIT_MAX_FALHAS` | `10` (padrão) | Tentativas de login com senha errada antes de bloquear o IP |
-| `RATE_LIMIT_JANELA_MINUTOS` | `15` (padrão) | Duração do bloqueio |
+| `RATE_LIMIT_MAX_FALHAS` | `10` (padrão) | Falhas seguidas **na mesma conta** antes de ela ter de esperar |
+| `RATE_LIMIT_JANELA_MINUTOS` | `2` (padrão) | Prazo em que as falhas se somam e tempo de espera depois de estourar |
 | `CHECKIN_JANELA_CODIGO_SEGUNDOS` | `900` (padrão) | De quanto em quanto tempo o QR de check-in se renova (15 min) |
 | `CHECKIN_TOLERANCIA_ANTES_MINUTOS` | `60` (padrão) | Quanto antes do evento o admin já consegue gerar e projetar o QR |
 | `CHECKIN_TOLERANCIA_DEPOIS_MINUTOS` | `30` (padrão) | Quanto depois do fim o check-out ainda é aceito |
