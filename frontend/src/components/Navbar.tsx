@@ -26,6 +26,7 @@ const MENU_ADMIN: ItemMenu[] = [
   { to: '/admin/usuarios', label: 'Usuários' },
   { to: '/admin/checkin', label: 'Check-in' },
   { to: '/admin/ranking', label: 'Ranking' },
+  { to: '/admin/distribuicoes', label: 'Notas' },
 ];
 
 export default function Navbar() {
