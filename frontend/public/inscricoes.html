@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inscrições &ndash; WECTI 2026</title>
+  <meta name="description" content="Atividades da WECTI 2026 abertas para inscrição: Hackathon, Batalha dos Carros com Balão, Exposição de Projetos dos Alunos, Projetos de Arduíno e Maratona de Programação." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── NAVBAR ── -->
+  <nav id="navbar">
+    <div class="nav-logo">
+      <!-- Mascot icon -->
+      <svg class="nav-logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Head -->
+        <rect x="9" y="8" width="18" height="14" rx="4" fill="none" stroke="#00e8c4" stroke-width="1.5"/>
+        <!-- Eyes -->
+        <circle cx="14" cy="14" r="2" fill="#00e8c4"/>
+        <circle cx="22" cy="14" r="2" fill="#00e8c4"/>
+        <!-- Eye glow -->
+        <circle cx="14" cy="14" r="1" fill="#fff" opacity="0.7"/>
+        <circle cx="22" cy="14" r="1" fill="#fff" opacity="0.7"/>
+        <!-- Mouth -->
+        <rect x="13" y="18" width="10" height="1.5" rx="0.75" fill="#00e8c4" opacity="0.7"/>
+        <!-- Antenna -->
+        <line x1="18" y1="8" x2="18" y2="4" stroke="#00e8c4" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="18" cy="3" r="1.5" fill="#00d4b0"/>
+        <!-- Neck -->
+        <rect x="16" y="22" width="4" height="2" fill="#00e8c4" opacity="0.5"/>
+        <!-- Body -->
+        <rect x="10" y="24" width="16" height="9" rx="3" fill="none" stroke="#00e8c4" stroke-width="1.5" opacity="0.8"/>
+        <!-- Body detail -->
+        <rect x="13" y="27" width="4" height="3" rx="1" fill="#00e8c4" opacity="0.3"/>
+        <circle cx="24" cy="28.5" r="1.5" fill="#00e8c4" opacity="0.5"/>
+        <!-- Arms -->
+        <line x1="10" y1="26" x2="6" y2="29" stroke="#00e8c4" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="26" y1="26" x2="30" y2="29" stroke="#00e8c4" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      WECTI
+    </div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="home.html#home">Home</a></li>
+      <li><a href="home.html#palestrantes">Palestrantes</a></li>
+      <li><a href="home.html#galeria">Galeria</a></li>
+      <li><a href="home.html#sobre">Sobre</a></li>
+      <li><a href="home.html#contato">Contato</a></li>
+      <li><a href="inscricoes.html">Inscrições</a></li>
+      <!--
+        Entrada para o sistema. Os dois caminhos que um aluno pode
+        precisar: quem nunca entrou cria a conta, quem ja tem faz login.
+        As rotas /cadastro e /login sao do app React (ver App.tsx); o
+        .htaccess entrega o index.html do app para elas.
+      -->
+      <li class="nav-acesso"><a href="/cadastro" class="nav-ghost">Primeiro acesso</a></li>
+      <li class="nav-acesso"><a href="/login" class="nav-cta">Login</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </div>
+  </nav>
+
+  <!-- ── FAIXA DO TOPO ── -->
+  <header class="pagina-topo">
+    <h1>Inscrições</h1>
+    <div class="footer-divider"></div>
+  </header>
+
+  <!--
+    Uma pagina, nao uma secao da home: sao cinco atividades com bastante
+    informacao cada, e o link do menu abre tudo de uma vez.
+
+    Cada botao abre o PDF do regulamento em outra aba. O formulario de
+    inscricao esta dentro do proprio PDF (Microsoft Forms, no fim do
+    documento) - decisao da organizacao, por isso o aviso logo abaixo.
+    Os PDFs ficam em public/inscricoes/ e sao copiados como estao.
+  -->
+  <section>
+    <div class="container">
+      <p class="inscricoes-aviso">
+        O formulário de inscrição de cada atividade fica no final do próprio
+        regulamento &mdash; abra o PDF e procure por <em>&ldquo;Faça sua inscrição aqui&rdquo;</em>.
+      </p>
+
+      <div class="inscricoes-lista">
+
+        <article class="inscricao-card">
+          <div class="inscricao-info">
+            <h2 class="inscricao-titulo">Hackathon WECTI 2026</h2>
+            <p class="inscricao-resumo">Maratona de inovação: a equipe escolhe um dos desafios reais propostos e desenvolve a solução ao longo da semana do evento, com mentorias.</p>
+            <ul class="inscricao-fatos">
+              <li>Equipes de 6 a 10 integrantes</li>
+              <li>25 a 30/09/2026, presencial</li>
+              <li>Seleção por vídeo pitch de 2 min</li>
+              <li>Inscrições até 20/09/2026</li>
+            </ul>
+            <p class="inscricao-destaque">1º lugar: 1.000 pontos por integrante, kit universitário e pitch para investidores</p>
+          </div>
+
+          <div class="inscricao-acao">
+            <a class="btn-primary" href="inscricoes/hackathon.pdf" target="_blank" rel="noopener">
+              Abrir regulamento
+            </a>
+            <span class="inscricao-arquivo">PDF &middot; 2.3 MB</span>
+          </div>
+        </article>
+
+        <article class="inscricao-card">
+          <div class="inscricao-info">
+            <h2 class="inscricao-titulo">Batalha dos Carros com Balão</h2>
+            <p class="inscricao-resumo">Sua equipe constrói um robô móvel com Arduino (ou plataforma similar) para estourar o balão do adversário e proteger o próprio.</p>
+            <ul class="inscricao-fatos">
+              <li>Robô de até 30 × 30 cm e 2 kg</li>
+              <li>Controle sem fio ou autônomo</li>
+              <li>Rodadas de até 5 minutos</li>
+              <li>Arena de 3 × 3 m</li>
+            </ul>
+          </div>
+
+          <div class="inscricao-acao">
+            <a class="btn-primary" href="inscricoes/batalha-carros-balao.pdf" target="_blank" rel="noopener">
+              Abrir regulamento
+            </a>
+            <span class="inscricao-arquivo">PDF &middot; 179 KB</span>
+          </div>
+        </article>
+
+        <article class="inscricao-card">
+          <div class="inscricao-info">
+            <h2 class="inscricao-titulo">Exposição de Projetos dos Alunos</h2>
+            <p class="inscricao-resumo">Apresente o MVP do projeto que você desenvolveu no semestre para uma banca de professores dos cursos de TI e convidados.</p>
+            <ul class="inscricao-fatos">
+              <li>MVP em funcionamento</li>
+              <li>Banner de 90 × 120 cm (modelo no Blackboard)</li>
+              <li>Apresentação oral para a banca</li>
+            </ul>
+          </div>
+
+          <div class="inscricao-acao">
+            <a class="btn-primary" href="inscricoes/projetos-alunos.pdf" target="_blank" rel="noopener">
+              Abrir regulamento
+            </a>
+            <span class="inscricao-arquivo">PDF &middot; 167 KB</span>
+          </div>
+        </article>
+
+        <article class="inscricao-card">
+          <div class="inscricao-info">
+            <h2 class="inscricao-titulo">Exposição de Projetos de Arduíno</h2>
+            <p class="inscricao-resumo">Demonstre o protótipo funcionando e explique para a banca o problema, a solução e as decisões técnicas por trás dele.</p>
+            <ul class="inscricao-fatos">
+              <li>Demonstração prática do protótipo</li>
+              <li>Apresentação oral</li>
+              <li>Inscrições até 20/09/2026</li>
+            </ul>
+          </div>
+
+          <div class="inscricao-acao">
+            <a class="btn-primary" href="inscricoes/projetos-arduino.pdf" target="_blank" rel="noopener">
+              Abrir regulamento
+            </a>
+            <span class="inscricao-arquivo">PDF &middot; 152 KB</span>
+          </div>
+        </article>
+
+        <article class="inscricao-card">
+          <div class="inscricao-info">
+            <h2 class="inscricao-titulo">Maratona de Programação</h2>
+            <p class="inscricao-resumo">Uma hora para resolver o máximo de desafios na plataforma Beecrowd, em equipes de três integrantes.</p>
+            <ul class="inscricao-fatos">
+              <li>Equipes de exatamente 3 alunos</li>
+              <li>Java, Python ou C</li>
+              <li>1 hora de competição</li>
+              <li>Conta individual no Beecrowd</li>
+              <li>Inscrições até 20/09/2026</li>
+            </ul>
+          </div>
+
+          <div class="inscricao-acao">
+            <a class="btn-primary" href="inscricoes/maratona-programacao.pdf" target="_blank" rel="noopener">
+              Abrir regulamento
+            </a>
+            <span class="inscricao-arquivo">PDF &middot; 165 KB</span>
+          </div>
+        </article>
+
+      </div>
+
+      <!--
+        Regra igual para as cinco atividades, entao fica uma vez so no fim
+        em vez de repetida em cada card.
+      -->
+      <aside class="inscricoes-pontuacao">
+        <h2>Como a pontuação funciona</h2>
+        <div class="pontuacao-grid">
+          <div>
+            <strong>100 pontos</strong>
+            <span>para todo aluno que participar</span>
+          </div>
+          <div>
+            <strong>+300 / +200 / +100</strong>
+            <span>adicional de 1º, 2º e 3º lugar</span>
+          </div>
+          <div>
+            <strong>500 pts = 0,5 na nota</strong>
+            <span>1.000 = 1,0 &middot; 1.500 = 1,5 &middot; 2.000+ = 2,0</span>
+          </div>
+          <div>
+            <strong>Limite de 2,0 pontos</strong>
+            <span>em disciplina de TI do semestre vigente</span>
+          </div>
+        </div>
+        <p class="pontuacao-obs">
+          Os pontos são acumulativos entre as atividades. O Hackathon tem premiação
+          própria: 1.000 pontos por integrante da equipe vencedora. Consulte o
+          regulamento de cada atividade para as regras completas.
+        </p>
+      </aside>
+
+      <a class="voltar" href="home.html">&#8592; Voltar para a home</a>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer id="contato">
+    <div class="footer-logo">WECTI</div>
+    <div class="footer-divider"></div>
+    <p class="footer-text">
+      Workshop de Empreendedorismo, Ciência, Tecnologia e Inovação &mdash; Tech Revolution &middot; 6ª Edição
+    </p>
+    <p class="footer-text" style="margin-top:1.5rem; font-size:0.75rem; opacity:0.5;">
+      © 2026 WECTI. Template desenvolvido para a 6ª edição.
+    </p>
+  </footer>
+
+  <script>
+    // Mesmo comportamento da home: menu no celular e navbar que escurece
+    // ao rolar. Duplicado de proposito - sao paginas estaticas, sem build.
+    function toggleMenu() {
+      document.getElementById('navLinks').classList.toggle('open');
+    }
+    window.addEventListener('scroll', () => {
+      document.getElementById('navbar').style.background =
+        window.scrollY > 40 ? 'rgba(10,10,15,0.96)' : 'rgba(10,10,15,0.75)';
+    });
+  </script>
+</body>
+</html>

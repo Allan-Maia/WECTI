@@ -1,0 +1,91 @@
+package com.wecti.api.service;
+
+import com.wecti.api.domain.Perfil;
+import com.wecti.api.domain.PontuacaoExtra;
+import com.wecti.api.domain.Usuario;
+import com.wecti.api.dto.NovaPontuacaoExtraRequest;
+import com.wecti.api.exception.CampoInvalidoException;
+import com.wecti.api.exception.RecursoNaoEncontradoException;
+import com.wecti.api.repository.PontuacaoExtraRepository;
+import com.wecti.api.repository.UsuarioRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Pontos lancados a mao pelo admin - premio de gincana, tipicamente.
+ *
+ * <p>Somam-se a pontuacao das palestras dentro do mesmo periodo; nao a
+ * substituem. Ver {@link PontuacaoService} e {@link RankingService}, que
+ * consomem estes valores.
+ */
+@Service
+public class PontuacaoExtraService {
+
+    /**
+     * Teto por lancamento. Nao e regra de negocio do professor: e trava
+     * contra dedo escorregado. Digitar 5000 em vez de 50 no meio de um
+     * evento decidiria o ranking inteiro, e o erro so apareceria na
+     * premiacao.
+     */
+    private static final int LIMITE_POR_LANCAMENTO = 1000;
+
+    private final PontuacaoExtraRepository repository;
+    private final UsuarioRepository usuarioRepository;
+
+    public PontuacaoExtraService(PontuacaoExtraRepository repository, UsuarioRepository usuarioRepository) {
+        this.repository = repository;
+        this.usuarioRepository = usuarioRepository;
+    }
+
+    public PontuacaoExtra lancar(NovaPontuacaoExtraRequest request, UUID adminId) {
+        if (request.pontos() == 0) {
+            throw new CampoInvalidoException("pontos", "Informe uma pontuacao diferente de zero");
+        }
+        if (Math.abs(request.pontos()) > LIMITE_POR_LANCAMENTO) {
+            throw new CampoInvalidoException("pontos",
+                    "Lancamento maximo de " + LIMITE_POR_LANCAMENTO + " pontos por vez");
+        }
+
+        Usuario aluno = usuarioRepository.findById(request.alunoId())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Aluno nao encontrado"));
+        // Pontuacao so faz sentido para aluno: admin nao disputa ranking.
+        if (aluno.getPerfil() != Perfil.ALUNO) {
+            throw new CampoInvalidoException("alunoId", "So e possivel lancar pontos para alunos");
+        }
+
+        Usuario admin = usuarioRepository.findById(adminId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario nao encontrado"));
+
+        return repository.save(PontuacaoExtra.builder()
+                .aluno(aluno)
+                .pontos(request.pontos())
+                .motivo(request.motivo().trim())
+                .criadoPor(admin)
+                .build());
+    }
+
+    public List<PontuacaoExtra> listar(UUID alunoId) {
+        return repository.findByAlunoIdOrderByCriadoEmDesc(alunoId);
+    }
+
+    /** Desfaz um lancamento. E o caminho para corrigir "lancei no aluno
+     *  errado" sem deixar rastro confuso de mais e menos. */
+    public void remover(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new RecursoNaoEncontradoException("Lancamento nao encontrado: " + id);
+        }
+        repository.deleteById(id);
+    }
+
+    /** Extras de todos os alunos, somados por aluno - o ranking precisa
+     *  da turma inteira sem consultar um a um. */
+    public Map<UUID, Integer> totaisPorAluno() {
+        return repository.findTodosParaRanking().stream()
+                .collect(Collectors.groupingBy(e -> e.getAluno().getId(),
+                        Collectors.summingInt(PontuacaoExtra::getPontos)));
+    }
+}

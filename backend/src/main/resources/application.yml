@@ -1,0 +1,201 @@
+# Namespace proprio (app.datasource.*), nao spring.datasource.* - a
+# hospedagem (Integrator Host) injeta SPRING_DATASOURCE_USERNAME/PASSWORD
+# como variavel de ambiente do processo, e variavel de ambiente sempre
+# ganha de qualquer application.yml. O DataSourceConfig.java le essas
+# propriedades e monta o DataSource manualmente, ignorando a
+# spring.datasource.* que a hospedagem sobrescreve.
+app:
+  datasource:
+    # Nome do banco vem de DB_NAME: no cPanel o banco recebe o prefixo da
+    # conta, e esse nome muda se a conta ou o banco mudarem. Deixar fixo
+    # aqui obrigaria a recompilar o .jar so pra corrigir um nome.
+    # DB_HOST/DB_PORT tambem sao variaveis pelo mesmo motivo, embora quase
+    # sempre fiquem em localhost:3306 na hospedagem compartilhada.
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:jadir9152_wecti}?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
+    # Sem valor padrao de proposito: usuario/senha de producao nunca ficam
+    # no codigo-fonte. Configure DB_USER/DB_PASSWORD como variavel de
+    # ambiente real no painel da hospedagem (ou no application.yml externo
+    # em appservers/standalone) - se nao estiverem definidas, a aplicacao
+    # falha ao subir em vez de usar um valor exposto aqui.
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cors:
+    # Origens que podem chamar a API do navegador (politica de CORS, ver
+    # SecurityConfig.corsConfigurationSource - usa allowedOriginPatterns,
+    # entao "*" aqui funciona como coringa de verdade). Em producao,
+    # defina CORS_ALLOWED_ORIGINS com o dominio real do frontend (varias
+    # origens separadas por virgula) assim que ele for publicado - sem
+    # isso, o navegador bloqueia toda chamada do site pra essa API.
+    #
+    # O padrao de dev inclui 192.168.*.*/10.*.*.* pra cobrir testar o
+    # site de outro aparelho na mesma rede Wi-Fi (ex.: celular acessando
+    # http://<ip-do-notebook>:5173) - sem isso, so "localhost" mesmo
+    # conseguia logar.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://192.168.*.*:5173,http://10.*.*.*:5173}
+  # URL do frontend usada pra montar o link embutido no QR code de
+  # check-in/check-out (CheckinSessaoController) - o aluno escaneia com a
+  # camera do celular, que abre essa URL direto, sem precisar de app.
+  # Configure FRONTEND_URL com o dominio real assim que o frontend for
+  # publicado.
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  inscricao:
+    # Folga depois do horario de inicio em que o aluno ainda consegue se
+    # inscrever (e cancelar). Existe para quem chega atrasado: sem ela,
+    # quem aparece 5 minutos depois do comeco nao se inscreve, logo nao
+    # faz check-in, logo nao pontua - ficaria de fora de uma palestra em
+    # que esta presente.
+    #
+    # O limite util e a propria janela de check-in: ela fecha em
+    # (fim do evento + app.checkin.tolerancia-depois-minutos). Uma folga
+    # de inscricao maior que isso deixaria o aluno se inscrever numa
+    # palestra em que ele ja nao consegue marcar presenca - ele acha que
+    # vai pontuar e nao pontua.
+    tolerancia-apos-inicio-minutos: ${INSCRICAO_TOLERANCIA_MINUTOS:15}
+  checkin:
+    # De quanto em quanto tempo o codigo embutido no QR de check-in muda
+    # (ver CodigoRotativoCheckin).
+    #
+    # 15 MINUTOS, a pedido do professor (setembro de 2026). Eram 60s, e
+    # com isso o aluno tinha 1 minuto entre fotografar a tela e
+    # confirmar - quem precisava fazer login no meio levava
+    # "Este QR code ja mudou" num check-in legitimo.
+    #
+    # A janela ANTERIOR tambem e aceita, entao o codigo vale na pratica
+    # entre 1 e 2 janelas: com 900s, no minimo 15 e no maximo 30
+    # minutos. O minimo garantido e o que o professor pediu.
+    #
+    # Ele decidiu nao tentar impedir que os alunos repassem foto do QR
+    # ("nao temos como controlar isso"), entao a rotacao deixou de ser
+    # defesa e virou so higiene: um link vazado morre em ate meia hora,
+    # e a sessao inteira morre 30 min depois do fim da palestra.
+    janela-codigo-segundos: ${CHECKIN_JANELA_CODIGO_SEGUNDOS:900}
+    # A sessao de check-in so aceita confirmacao dentro do horario do
+    # proprio evento, mais estas folgas. Antes valia "criacao + 6 horas",
+    # o que deixava um QR gerado de manha ainda funcionando a tarde.
+    #
+    # Antes: a partir de quando o admin ja consegue gerar e projetar o QR.
+    # Uma hora, a pedido do professor (setembro de 2026) - eram 30 min, e
+    # isso obrigava a montar a sala e so entao liberar o QR, em cima da
+    # hora. Aumentar so estende o inicio da janela.
+    tolerancia-antes-minutos: ${CHECKIN_TOLERANCIA_ANTES_MINUTOS:60}
+    # Depois: tempo pra quem esta saindo fazer o check-out na porta.
+    tolerancia-depois-minutos: ${CHECKIN_TOLERANCIA_DEPOIS_MINUTOS:30}
+  pontuacao:
+    # Quanto custa reservar vaga e nao aparecer (no-show).
+    #
+    # ZERO por decisao do professor (setembro de 2026): faltar nao tira
+    # mais ponto nenhum. O evento continua aparecendo na tela do aluno
+    # marcado como "nao compareceu", so que valendo 0 - o registro
+    # continua servindo para o admin ver quem reservou vaga e nao foi.
+    #
+    # A configuracao continua existindo porque essa regra ja mudou duas
+    # vezes: era "perde os pontos daquela palestra", virou "perde 100
+    # fixos" e agora e zero. Se voltar a valer, basta trocar o numero -
+    # nao ha codigo a reescrever.
+    penalidade-no-show: ${PONTUACAO_PENALIDADE_NO_SHOW:0}
+    # Teto de pontos que da para GANHAR em palestras. O teto apara so os
+    # ganhos; a penalidade de no-show e descontada depois dele, senao
+    # quem ja estivesse acima do teto faltaria de graca.
+    #
+    # Gincana (pontuacao-extra, lancada a mao pelo admin) fica de fora
+    # deste teto - e premiacao, nao pontuacao de palestra.
+    limite-eventos: ${PONTUACAO_LIMITE_EVENTOS:2000}
+  distribuicao:
+    # Conversao da pontuacao do WECTI em nota, a pedido do professor
+    # (outubro de 2026): o aluno escolhe em quais turmas os pontos dele
+    # viram decimo de nota. Ver RegraDistribuicao.
+    #
+    # Quantos pontos valem 1,0 de nota. Com 1000: 2000 pontos = 2,0;
+    # 1500 = 1,5; 300 = 0,3.
+    pontos-por-nota: ${DISTRIBUICAO_PONTOS_POR_NOTA:1000}
+    # Teto do que da para converter. 2,0 e a nota maxima, entao quem
+    # passou de 2000 pontos distribui 2000 e nao mais.
+    #
+    # Configuracao PROPRIA, separada de pontuacao.limite-eventos, embora
+    # as duas valham 2000 hoje: uma limita o que da para GANHAR em
+    # palestra, a outra o que da para CONVERTER em nota. Se o professor
+    # soltar o teto de ganho, o teto da nota provavelmente continua 2,0 -
+    # com um parametro so, mexer em um mexeria no outro sem querer.
+    limite-pontos: ${DISTRIBUICAO_LIMITE_PONTOS:2000}
+  rate-limit:
+    # Trava forca bruta no login e no "esqueci minha senha". O limite e
+    # por CONTA (ver LimiteTentativasPorConta), nao por IP.
+    #
+    # Era por IP ate 28/09/2026 e derrubou o primeiro dia da WECTI: a
+    # turma inteira sai pelo mesmo IP do Wi-Fi do campus, entao dez
+    # alunos errando a propria senha bloqueavam todos os outros - e o
+    # bloqueio pegava tambem o "esqueci minha senha", entao quem tentava
+    # se recuperar ficava preso. 42 alunos afetados. O comentario que
+    # ficava aqui dizia que contar so as falhas resolvia esse cenario;
+    # nao resolvia.
+    #
+    # Quantas falhas seguidas NA MESMA CONTA ate ela esperar.
+    max-falhas: ${RATE_LIMIT_MAX_FALHAS:10}
+    # Serve para DUAS coisas: e o prazo em que as falhas se somam e,
+    # depois de estourar, quanto tempo a conta fica esperando.
+    #
+    # 2 minutos, e nao 15: num evento, 15 minutos de espera valem o
+    # mesmo que nao conseguir entrar - o aluno perde a palestra. Dois
+    # minutos seguram quem esta martelando senha sem punir quem so se
+    # atrapalhou. O contador tambem zera sozinho quando a pessoa
+    # acerta a senha (ver LimiteTentativasPorConta).
+    janela-minutos: ${RATE_LIMIT_JANELA_MINUTOS:2}
+
+spring:
+  application:
+    name: wecti-api
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        # As entidades usam java.util.UUID como PK; sem isso, o Hibernate
+        # mapeia UUID para BINARY(16) por padrao no dialeto MySQL, mas a
+        # migration usa VARCHAR(36) - a validacao do schema quebraria no
+        # startup sem essa propriedade.
+        type:
+          preferred_uuid_jdbc_type: VARCHAR
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+  # Em producao a aplicacao fica ATRAS do servidor web da hospedagem, que
+  # e quem termina o HTTPS (certificado TLS) e repassa a requisicao pra ca
+  # em HTTP interno. Sem isto, a aplicacao enxerga toda requisicao como
+  # "http" e com o IP do proxy, o que quebra duas coisas:
+  #
+  #   1. o IP usado pelo limite de tentativas de login
+  #      (RateLimitAutenticacaoFilter) seria SEMPRE o do proxy - um unico
+  #      atacante bloquearia o site inteiro;
+  #   2. qualquer URL que a aplicacao montar sairia como http:// mesmo o
+  #      site estando em https://.
+  #
+  # "framework" faz o Spring ler os cabecalhos X-Forwarded-* que o proxy
+  # envia e corrigir esquema, host e IP de origem.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:framework}
+
+springdoc:
+  swagger-ui:
+    path: /docs
+    # Documentacao interativa da API: fica ligada em desenvolvimento, mas
+    # em producao normalmente nao ha motivo pra deixar o mapa completo dos
+    # endpoints aberto pra qualquer visitante - desligue com
+    # SPRINGDOC_ENABLED=false.
+    enabled: ${SPRINGDOC_ENABLED:true}
+  api-docs:
+    path: /api-docs
+    enabled: ${SPRINGDOC_ENABLED:true}
+
+jwt:
+  # Idem: sem default. Configure JWT_SECRET com um valor aleatorio forte
+  # no ambiente de producao - esse segredo assina os tokens de login, um
+  # valor exposto no codigo permitiria forjar tokens validos.
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
