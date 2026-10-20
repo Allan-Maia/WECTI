@@ -268,8 +268,18 @@ confirmar de novo.
 - Nomes de coluna em `snake_case` no banco, `camelCase` em Java (mapeado
   via `@Column(name = "...")`).
 
-## O que NÃO está implementado neste esqueleto
+## Autenticação e autorização
 
-Autenticação JWT real (login, geração/validação de token, autorização por
-perfil) é tarefa da Fase 1 - o `SecurityConfig` atual libera tudo
-(`permitAll`) só para o esqueleto subir e o Swagger UI funcionar.
+**Implementadas e em produção.** Login com JWT (`JwtService`,
+`JwtAuthenticationFilter`), senha em BCrypt, e autorização por perfil
+rota a rota no `SecurityConfig` - são 34 regras de `requestMatchers`, 24
+delas exigindo perfil específico com `hasRole`.
+
+> Uma versão anterior deste arquivo dizia que isso era "tarefa da Fase 1"
+> e que o `SecurityConfig` liberava tudo com `permitAll`. **Era verdade
+> no esqueleto inicial, e ficou desatualizado** - o texto sobreviveu meses
+> depois de a autenticação estar no ar, num arquivo da raiz do
+> repositório, que é público.
+
+A restrição vive no backend, nunca só no menu do frontend: esconder um
+link não impede ninguém de chamar a API direto.
