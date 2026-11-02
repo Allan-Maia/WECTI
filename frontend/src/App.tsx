@@ -120,7 +120,9 @@ function AppRoutes() {
       <Route
         path="/admin/usuarios"
         element={
-          <RotaPrivada perfis={['ADMIN']}>
+          /* O professor consulta a lista (só leitura - o backend recusa
+             criar/editar/excluir para ele). */
+          <RotaPrivada perfis={['ADMIN', 'PROFESSOR']}>
             <AdminUsuariosPage />
           </RotaPrivada>
         }
@@ -136,7 +138,7 @@ function AppRoutes() {
       <Route
         path="/admin/distribuicoes"
         element={
-          <RotaPrivada perfis={['ADMIN']}>
+          <RotaPrivada perfis={['ADMIN', 'PROFESSOR']}>
             <AdminDistribuicoesPage />
           </RotaPrivada>
         }
